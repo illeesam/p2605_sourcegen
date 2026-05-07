@@ -1,0 +1,30 @@
+spring:
+  # ===== 활성 프로파일 =====
+  # VM 옵션으로 변경: -Dspring.profiles.active=oracle  또는  -Dspring.profiles.active=pgsql
+  profiles:
+    active: oracle
+
+  # ===== JPA 공통 =====
+  jpa:
+    hibernate:
+      ddl-auto: none
+    # SQL 출력은 logback (org.hibernate.SQL DEBUG) 로 통일 → show-sql 끔
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        highlight_sql: true   # ANSI 색상 (콘솔 가독성)
+        use_sql_comments: true
+    open-in-view: false
+
+server:
+  port: 8080
+
+# ===== Swagger / OpenAPI =====
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+    tags-sorter: alpha

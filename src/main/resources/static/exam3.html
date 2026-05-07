@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Exam3 트리</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .tree { font-size: 13px; }
+        .tree-node { padding: 6px 8px; border-bottom: 1px solid #ecf0f1;
+            display: flex; align-items: center; gap: 6px; cursor: default; }
+        .tree-node:hover { background: #f8f9fc; }
+        .tree-toggle { width: 18px; text-align: center; cursor: pointer; user-select: none;
+            color: #4f7df3; font-weight: bold; font-size: 11px; }
+        .tree-toggle.empty { color: #ccc; cursor: default; }
+        .tree-id { font-weight: 600; min-width: 100px; color: #2c3e50; }
+        .tree-nm { color: #555; flex: 1; }
+        .tree-cols { color: #95a5a6; font-size: 11px; margin-right: 8px; }
+        .tree-actions { display: flex; gap: 4px; }
+        .tree-level-1 { background: #eaf0ff; }
+        .tree-level-2 { padding-left: 28px; background: #f5f8ff; }
+        .tree-level-3 { padding-left: 56px; }
+        .tree-loading { padding: 6px 56px; font-style: italic; color: #95a5a6; font-size: 12px; }
+        .tree-empty { padding: 6px 56px; color: #bdc3c7; font-size: 12px; }
+        .tree-quick { display: flex; gap: 8px; align-items: center; padding: 10px;
+            background: #f5f6fa; border-radius: 6px; margin-bottom: 12px; }
+        .tree-quick input { padding: 5px 8px; border: 1px solid #d0d7de; border-radius: 4px; font-size: 12px; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="container">
+        <h1>Exam3 트리 (exam1 ▶ exam2 ▶ exam3)</h1>
+
+        <div class="card">
+            <h2>트리</h2>
+            <div class="tree-quick">
+                <span style="font-size:12px;color:#7f8c8d;">exam1_nm 검색:</span>
+                <input v-model="rootSearch" placeholder="exam1 이름 검색" @keyup.enter="loadRoot">
+                <button class="btn btn-primary btn-sm" @click="loadRoot">검색</button>
+                <button class="btn btn-secondary btn-sm" @click="rootSearch=''; loadRoot()">초기화</button>
+                <span style="margin-left:auto;">
+                    <button class="btn btn-success btn-sm" @click="openInsert('exam1', null)">+ exam1 등록</button>
+                </span>
+            </div>
+
+            <div class="tree" v-if="roots.length">
+                <template v-for="r1 in roots" :key="'r1-'+r1.exam1Id">
+                    <!-- Level 1: exam1 -->
+                    <div class="tree-node tree-level-1">
+                        <span class="tree-toggle" @click="toggle1(r1)">{{ state[k1(r1)]?.open ? '▼' : '▶' }}</span>
+                        <span class="tree-id">{{r1.exam1Id}}</span>
+                        <span class="tree-nm">{{r1.exam1Nm}}</span>
+                        <span class="tree-cols">
+                            {{[r1.col11,r1.col12,r1.col13,r1.col14,r1.col15].filter(Boolean).join(' / ')}}
+                        </span>
+                        <div class="tree-actions">
+                            <button class="btn btn-success btn-sm" @click="openInsert('exam2', r1)">+ exam2</button>
+                            <button class="btn btn-warning btn-sm" @click="openUpdate('exam1', r1)">수정</button>
+                            <button class="btn btn-danger btn-sm" @click="del('exam1', r1)">삭제</button>
+                        </div>
+                    </div>
+
+                    <!-- Level 2: exam2 -->
+                    <template v-if="state[k1(r1)]?.open">
+                        <div v-if="state[k1(r1)].loading" class="tree-loading">불러오는 중...</div>
+                        <div v-else-if="!state[k1(r1)].children.length" class="tree-empty">자식 exam2 없음</div>
+                        <template v-for="r2 in state[k1(r1)].children" :key="'r2-'+r2.exam1Id+'/'+r2.exam2Id">
+                            <div class="tree-node tree-level-2">
+                                <span class="tree-toggle" @click="toggle2(r2)">{{ state[k2(r2)]?.open ? '▼' : '▶' }}</span>
+                                <span class="tree-id">{{r2.exam2Id}}</span>
+                                <span class="tree-nm">{{r2.exam2Nm}}</span>
+                                <span class="tree-cols">
+                                    {{[r2.col21,r2.col22,r2.col23,r2.col24,r2.col25].filter(Boolean).join(' / ')}}
+                                </span>
+                                <div class="tree-actions">
+                                    <button class="btn btn-success btn-sm" @click="openInsert('exam3', r2)">+ exam3</button>
+                                    <button class="btn btn-warning btn-sm" @click="openUpdate('exam2', r2)">수정</button>
+                                    <button class="btn btn-danger btn-sm" @click="del('exam2', r2)">삭제</button>
+                                </div>
+                            </div>
+
+                            <!-- Level 3: exam3 -->
+                            <template v-if="state[k2(r2)]?.open">
+                                <div v-if="state[k2(r2)].loading" class="tree-loading">불러오는 중...</div>
+                                <div v-else-if="!state[k2(r2)].children.length" class="tree-empty">자식 exam3 없음</div>
+                                <div v-for="r3 in state[k2(r2)].children"
+                                     :key="'r3-'+r3.exam1Id+'/'+r3.exam2Id+'/'+r3.exam3Id"
+                                     class="tree-node tree-level-3">
+                                    <span class="tree-toggle empty">·</span>
+                                    <span class="tree-id">{{r3.exam3Id}}</span>
+                                    <span class="tree-nm">{{r3.exam3Nm}}</span>
+                                    <span class="tree-cols">
+                                        {{[r3.col31,r3.col32,r3.col33,r3.col34,r3.col35].filter(Boolean).join(' / ')}}
+                                    </span>
+                                    <div class="tree-actions">
+                                        <button class="btn btn-warning btn-sm" @click="openUpdate('exam3', r3)">수정</button>
+                                        <button class="btn btn-danger btn-sm" @click="del('exam3', r3)">삭제</button>
+                                    </div>
+                                </div>
+                            </template>
+                        </template>
+                    </template>
+                </template>
+            </div>
+            <div v-else class="empty">데이터 없음</div>
+        </div>
+
+        <!-- 모달 (exam1/exam2/exam3 공용) -->
+        <div class="modal-overlay" v-if="modal.show" @click.self="modal.show=false">
+            <div class="modal">
+                <h3>{{modal.mode==='insert' ? '신규 등록' : '수정'}} - {{modal.kind}}</h3>
+                <div class="field" v-for="f in formFieldsFor(modal.kind)" :key="f.name">
+                    <label>{{f.label}}{{f.required ? ' *' : ''}}</label>
+                    <input v-model="modal.form[f.name]"
+                           :disabled="(modal.mode==='update' && f.pk) || f.fixed"
+                           :placeholder="f.required ? '필수' : ''">
+                </div>
+                <div class="modal-btns">
+                    <button class="btn btn-secondary" @click="modal.show=false">취소</button>
+                    <button class="btn btn-primary" @click="save">저장</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 디버그 패널 -->
+        <div class="debug">
+            <div class="debug-header">
+                <h2>요청/응답 정보</h2>
+                <span class="debug-status"
+                      :class="debug.error ? 'err' : (debug.status ? 'ok' : '')">
+                    <template v-if="debug.status">{{debug.status}} ({{debug.durationMs}} ms)</template>
+                    <template v-else>대기 중</template>
+                </span>
+            </div>
+            <div class="debug-body">
+                <div class="debug-row">
+                    <div class="debug-label">요청 URL</div>
+                    <div class="debug-value">
+                        <span v-if="debug.method" class="debug-method" :class="debug.method">{{debug.method}}</span>
+                        <span v-if="debug.url">{{debug.url}}</span>
+                        <span v-else class="debug-empty">아직 요청 없음</span>
+                    </div>
+                </div>
+                <div class="debug-row">
+                    <div class="debug-label">파라미터</div>
+                    <div class="debug-value">
+                        <pre v-if="debug.params && Object.keys(debug.params).length">{{fmt(debug.params)}}</pre>
+                        <span v-else class="debug-empty">(없음)</span>
+                    </div>
+                </div>
+                <div class="debug-row">
+                    <div class="debug-label">요청 본문</div>
+                    <div class="debug-value">
+                        <pre v-if="debug.body">{{fmt(debug.body)}}</pre>
+                        <span v-else class="debug-empty">(없음)</span>
+                    </div>
+                </div>
+                <div class="debug-row">
+                    <div class="debug-label">응답 정보</div>
+                    <div class="debug-value">
+                        <pre v-if="debug.response !== null && debug.response !== undefined">{{fmt(debug.response)}}</pre>
+                        <span v-else class="debug-empty">(없음)</span>
+                    </div>
+                </div>
+                <div class="debug-row" v-if="debug.error">
+                    <div class="debug-label" style="color:#e74c3c;">오류</div>
+                    <div class="debug-value" style="color:#e74c3c;">{{debug.error}}</div>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="toast" class="toast" :class="toast.type==='ok' ? 'toast-ok' : 'toast-err'">{{toast.text}}</div>
+    </div>
+</div>
+
+<script>
+const { createApp, ref, reactive, onMounted } = Vue;
+const API = 'http://localhost:8080/api';
+
+function setObj(target, src) {
+    Object.keys(target).forEach(k => delete target[k]);
+    if (src) Object.assign(target, src);
+}
+function setArr(target, src) {
+    target.length = 0;
+    if (src && src.length) target.push(...src);
+}
+
+const FORM_FIELDS = {
+    exam1: [
+        { name: 'exam1Id', label: 'exam1_id', required: true, pk: true },
+        { name: 'exam1Nm', label: 'exam1_nm', required: true },
+        { name: 'col11', label: 'col11' },
+        { name: 'col12', label: 'col12' },
+        { name: 'col13', label: 'col13' },
+        { name: 'col14', label: 'col14' },
+        { name: 'col15', label: 'col15' },
+    ],
+    exam2: [
+        { name: 'exam1Id', label: 'exam1_id', required: true, pk: true, fixed: true },
+        { name: 'exam2Id', label: 'exam2_id', required: true, pk: true },
+        { name: 'exam2Nm', label: 'exam2_nm', required: true },
+        { name: 'col21', label: 'col21' },
+        { name: 'col22', label: 'col22' },
+        { name: 'col23', label: 'col23' },
+        { name: 'col24', label: 'col24' },
+        { name: 'col25', label: 'col25' },
+    ],
+    exam3: [
+        { name: 'exam1Id', label: 'exam1_id', required: true, pk: true, fixed: true },
+        { name: 'exam2Id', label: 'exam2_id', required: true, pk: true, fixed: true },
+        { name: 'exam3Id', label: 'exam3_id', required: true, pk: true },
+        { name: 'exam3Nm', label: 'exam3_nm', required: true },
+        { name: 'col31', label: 'col31' },
+        { name: 'col32', label: 'col32' },
+        { name: 'col33', label: 'col33' },
+        { name: 'col34', label: 'col34' },
+        { name: 'col35', label: 'col35' },
+    ]
+};
+
+const EMPTY_FORM = {
+    exam1: () => ({ exam1Id:'', exam1Nm:'', col11:'', col12:'', col13:'', col14:'', col15:'' }),
+    exam2: () => ({ exam1Id:'', exam2Id:'', exam2Nm:'', col21:'', col22:'', col23:'', col24:'', col25:'' }),
+    exam3: () => ({ exam1Id:'', exam2Id:'', exam3Id:'', exam3Nm:'',
+        col31:'', col32:'', col33:'', col34:'', col35:'' })
+};
+
+function idPath(kind, row) {
+    if (kind === 'exam1') return `/${row.exam1Id}`;
+    if (kind === 'exam2') return `/${row.exam1Id}/${row.exam2Id}`;
+    return `/${row.exam1Id}/${row.exam2Id}/${row.exam3Id}`;
+}
+
+createApp({
+    setup() {
+        const roots = reactive([]);
+        const rootSearch = ref('');
+        const state = reactive({});
+        const modal = reactive({ show: false, kind: 'exam1', mode: 'insert', form: {}, _refresh: null });
+        const debug = reactive({ method:'', url:'', params:null, body:null,
+            status:null, response:null, durationMs:null, error:null });
+        const toast = ref(null);
+
+        const k1 = r => 'k1:' + r.exam1Id;
+        const k2 = r => 'k2:' + r.exam1Id + '/' + r.exam2Id;
+
+        function notify(type, text) {
+            toast.value = { type, text };
+            setTimeout(() => toast.value = null, 2500);
+        }
+
+        async function call(method, url, body) {
+            setObj(debug, { method, url, params:null, body,
+                status:null, response:null, durationMs:null, error:null });
+            const start = performance.now();
+            const opts = { method };
+            if (body) {
+                opts.headers = { 'Content-Type': 'application/json' };
+                opts.body = JSON.stringify(body);
+            }
+            try {
+                const res = await fetch(url, opts);
+                debug.status = `${res.status} ${res.statusText}`;
+                debug.durationMs = Math.round(performance.now() - start);
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ error: res.statusText }));
+                    debug.response = err;
+                    debug.error = err.error || res.statusText;
+                    throw new Error(debug.error);
+                }
+                if (res.status === 204) { debug.response = '(no content)'; return null; }
+                const data = await res.json();
+                debug.response = data;
+                return data;
+            } catch (e) {
+                if (debug.durationMs == null) debug.durationMs = Math.round(performance.now() - start);
+                if (!debug.error) debug.error = e.message;
+                throw e;
+            }
+        }
+
+        async function loadRoot() {
+            try {
+                const params = {};
+                if (rootSearch.value) params.exam1Nm = rootSearch.value;
+                const qs = new URLSearchParams(params).toString();
+                const url = `${API}/exam1/list${qs ? '?' + qs : ''}`;
+                setObj(debug, { method:'GET', url, params, body:null,
+                    status:null, response:null, durationMs:null, error:null });
+                const start = performance.now();
+                const res = await fetch(url);
+                debug.status = `${res.status} ${res.statusText}`;
+                debug.durationMs = Math.round(performance.now() - start);
+                const data = await res.json();
+                debug.response = data;
+                setArr(roots, data);
+            } catch (e) { notify('err', e.message); }
+        }
+
+        async function toggle1(r1) {
+            const k = k1(r1);
+            if (!state[k]) state[k] = { open: false, loading: false, children: [] };
+            state[k].open = !state[k].open;
+            if (state[k].open && !state[k].children.length) {
+                state[k].loading = true;
+                try {
+                    const params = { exam1Id: r1.exam1Id };
+                    const qs = new URLSearchParams(params).toString();
+                    const data = await call('GET', `${API}/exam2/list?${qs}`, null);
+                    state[k].children = data;
+                } catch (e) { notify('err', e.message); }
+                state[k].loading = false;
+            }
+        }
+
+        async function toggle2(r2) {
+            const k = k2(r2);
+            if (!state[k]) state[k] = { open: false, loading: false, children: [] };
+            state[k].open = !state[k].open;
+            if (state[k].open && !state[k].children.length) {
+                state[k].loading = true;
+                try {
+                    const params = { exam1Id: r2.exam1Id, exam2Id: r2.exam2Id };
+                    const qs = new URLSearchParams(params).toString();
+                    const data = await call('GET', `${API}/exam3/list?${qs}`, null);
+                    state[k].children = data;
+                } catch (e) { notify('err', e.message); }
+                state[k].loading = false;
+            }
+        }
+
+        function formFieldsFor(kind) { return FORM_FIELDS[kind] || []; }
+
+        /** parent: exam2 등록 시 exam1 row, exam3 등록 시 exam2 row */
+        function openInsert(kind, parent) {
+            const form = EMPTY_FORM[kind]();
+            if (parent) {
+                if (kind === 'exam2') form.exam1Id = parent.exam1Id;
+                if (kind === 'exam3') {
+                    form.exam1Id = parent.exam1Id;
+                    form.exam2Id = parent.exam2Id;
+                }
+            }
+            setObj(modal, {
+                show: true, kind, mode: 'insert', form,
+                _refresh: () => refreshFor(kind, parent)
+            });
+        }
+
+        function openUpdate(kind, row) {
+            setObj(modal, {
+                show: true, kind, mode: 'update', form: { ...row },
+                _refresh: () => refreshFor(kind, row, true)
+            });
+        }
+
+        async function save() {
+            try {
+                if (modal.mode === 'insert') {
+                    await call('POST', `${API}/${modal.kind}`, modal.form);
+                    notify('ok', `${modal.kind} 등록 완료`);
+                } else {
+                    await call('PUT', `${API}/${modal.kind}${idPath(modal.kind, modal.form)}`, modal.form);
+                    notify('ok', `${modal.kind} 수정 완료`);
+                }
+                modal.show = false;
+                if (modal._refresh) await modal._refresh();
+            } catch (e) { notify('err', e.message); }
+        }
+
+        async function del(kind, row) {
+            const ids = kind === 'exam1' ? row.exam1Id
+                : kind === 'exam2' ? `${row.exam1Id}/${row.exam2Id}`
+                : `${row.exam1Id}/${row.exam2Id}/${row.exam3Id}`;
+            if (!confirm(`${kind} 삭제? [${ids}]`)) return;
+            try {
+                await call('DELETE', `${API}/${kind}${idPath(kind, row)}`, null);
+                notify('ok', `${kind} 삭제 완료`);
+                await refreshFor(kind, row, true);
+            } catch (e) { notify('err', e.message); }
+        }
+
+        /** 변경된 노드 새로고침 */
+        async function refreshFor(kind, row, isSelf = false) {
+            if (kind === 'exam1') {
+                await loadRoot();
+            } else if (kind === 'exam2') {
+                // exam2 변경 → 부모 exam1 의 자식목록 갱신
+                const parentKey = 'k1:' + row.exam1Id;
+                if (state[parentKey]) {
+                    state[parentKey].children = [];
+                    state[parentKey].open = true;
+                    state[parentKey].loading = true;
+                    try {
+                        const qs = new URLSearchParams({ exam1Id: row.exam1Id }).toString();
+                        const data = await call('GET', `${API}/exam2/list?${qs}`, null);
+                        state[parentKey].children = data;
+                    } catch (e) { notify('err', e.message); }
+                    state[parentKey].loading = false;
+                }
+            } else if (kind === 'exam3') {
+                const parentKey = 'k2:' + row.exam1Id + '/' + row.exam2Id;
+                if (state[parentKey]) {
+                    state[parentKey].children = [];
+                    state[parentKey].open = true;
+                    state[parentKey].loading = true;
+                    try {
+                        const qs = new URLSearchParams({
+                            exam1Id: row.exam1Id, exam2Id: row.exam2Id
+                        }).toString();
+                        const data = await call('GET', `${API}/exam3/list?${qs}`, null);
+                        state[parentKey].children = data;
+                    } catch (e) { notify('err', e.message); }
+                    state[parentKey].loading = false;
+                }
+            }
+        }
+
+        function fmt(v) {
+            if (v === null || v === undefined) return '(없음)';
+            if (typeof v === 'string') return v;
+            try { return JSON.stringify(v, null, 2); } catch { return String(v); }
+        }
+
+        onMounted(loadRoot);
+
+        return {
+            roots, rootSearch, state, modal, debug, toast,
+            k1, k2, loadRoot, toggle1, toggle2,
+            openInsert, openUpdate, save, del,
+            formFieldsFor, fmt
+        };
+    }
+}).mount('#app');
+</script>
+</body>
+</html>

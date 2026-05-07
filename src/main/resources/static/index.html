@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>JPA CRUD Test - Main</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; font-family: 'Segoe UI', 'Malgun Gothic', sans-serif; }
+
+        .layout { display: flex; height: 100vh; }
+
+        /* === 사이드바 === */
+        .sidebar {
+            width: 220px; background: #2c3e50; color: #ecf0f1;
+            display: flex; flex-direction: column; flex-shrink: 0;
+        }
+        .sidebar-header {
+            padding: 18px 16px; border-bottom: 1px solid #34495e;
+            font-size: 15px; font-weight: bold;
+        }
+        .sidebar-header small { display: block; font-size: 11px; color: #95a5a6; margin-top: 4px; font-weight: normal; }
+        .menu-section { padding: 12px 0; }
+        .menu-title { padding: 6px 16px; font-size: 11px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; }
+        .menu-item {
+            display: block; padding: 10px 16px 10px 24px;
+            color: #bdc3c7; text-decoration: none; cursor: pointer;
+            font-size: 13px; border-left: 3px solid transparent;
+            transition: background 0.15s, border-color 0.15s, color 0.15s;
+        }
+        .menu-item:hover { background: #34495e; color: #fff; }
+        .menu-item.active { background: #4f7df3; color: #fff; border-left-color: #fff; }
+        .menu-item .badge {
+            float: right; font-size: 10px; background: #34495e; color: #95a5a6;
+            padding: 2px 6px; border-radius: 3px;
+        }
+        .menu-item.active .badge { background: rgba(255,255,255,0.2); color: #fff; }
+
+        /* === 메인 영역 === */
+        .main { flex: 1; display: flex; flex-direction: column; }
+        .main-header {
+            padding: 12px 20px; background: #fff; border-bottom: 1px solid #ecf0f1;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .breadcrumb { font-size: 13px; color: #7f8c8d; }
+        .breadcrumb strong { color: #2c3e50; }
+        .api-info { font-size: 11px; color: #95a5a6; }
+        .api-info code { background: #ecf0f1; padding: 2px 6px; border-radius: 3px; color: #555; }
+
+        .frame-wrap { flex: 1; background: #f5f6fa; overflow: hidden; }
+        .frame-wrap iframe { width: 100%; height: 100%; border: none; background: #f5f6fa; }
+        .welcome { padding: 40px; text-align: center; color: #95a5a6; }
+        .welcome h2 { color: #2c3e50; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="layout">
+        <!-- 사이드바 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                JPA CRUD Test
+                <small>Oracle + QueryDSL</small>
+            </div>
+
+            <div class="menu-section" v-for="grp in groupedMenus" :key="grp.title">
+                <div class="menu-title">{{grp.title}}</div>
+                <a class="menu-item" v-for="m in grp.items" :key="m.key"
+                   :class="{active: current === m.key}"
+                   @click="select(m)">
+                    {{m.label}}
+                    <span class="badge" v-if="m.badge">{{m.badge}}</span>
+                </a>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">External Links</div>
+                <a class="menu-item" href="http://localhost:8080/swagger-ui.html" target="_blank">Swagger UI</a>
+                <a class="menu-item" href="http://localhost:8080/v3/api-docs" target="_blank">OpenAPI JSON</a>
+            </div>
+        </aside>
+
+        <!-- 메인 -->
+        <main class="main">
+            <div class="main-header">
+                <div class="breadcrumb">
+                    <span>홈</span>
+                    <span v-if="currentMenu"> &raquo; <strong>{{currentMenu.label}}</strong></span>
+                </div>
+                <div class="api-info" v-if="currentMenu">
+                    <code>{{currentMenu.url}}</code>
+                </div>
+            </div>
+
+            <div class="frame-wrap">
+                <iframe v-if="currentMenu" :src="currentMenu.url" :key="currentMenu.url"></iframe>
+                <div v-else class="welcome">
+                    <h2>JPA CRUD Test</h2>
+                    <p>좌측 메뉴에서 테이블을 선택하세요.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+const { createApp, ref, computed, onMounted } = Vue;
+
+const GROUPS = [
+    {
+        title: 'Exam Tables', items: [
+            { key: 'exam1', label: 'Exam1', badge: 'PK1', url: 'exam1.html' },
+            { key: 'exam2', label: 'Exam2', badge: 'PK2', url: 'exam2.html' },
+            { key: 'exam3', label: 'Exam3', badge: 'PK3', url: 'exam3.html' },
+        ]
+    },
+    {
+        title: 'Source Generator', items: [
+            { key: 'sg-oracle', label: 'Oracle DDL → Source', badge: 'GEN', url: 'sourcegen_oracle.html' },
+            { key: 'sg-pgsql',  label: 'PostgreSQL DDL → Source', badge: 'GEN', url: 'sourcegen_postgresql.html' },
+        ]
+    }
+];
+
+const MENUS = GROUPS.flatMap(g => g.items);
+
+createApp({
+    setup() {
+        const current = ref(null);
+
+        const currentMenu = computed(() => MENUS.find(m => m.key === current.value));
+        const groupedMenus = computed(() => GROUPS);
+
+        function select(m) {
+            current.value = m.key;
+            location.hash = m.key;
+        }
+
+        // 새로고침 후에도 마지막 화면 유지
+        onMounted(() => {
+            const hash = location.hash.replace('#', '');
+            const found = MENUS.find(m => m.key === hash);
+            current.value = found ? found.key : 'exam1';
+        });
+
+        return { menus: MENUS, groupedMenus, current, currentMenu, select };
+    }
+}).mount('#app');
+</script>
+</body>
+</html>

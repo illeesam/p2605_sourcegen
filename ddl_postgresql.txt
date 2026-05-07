@@ -1,0 +1,262 @@
+-- =========================================================
+-- PostgreSQL DDL for shopjoy_2604.zz_exam1 / zz_exam2 / zz_exam3
+-- =========================================================
+-- (필요 시 스키마/유저 사전 생성)
+-- CREATE USER shopjoy_2604 WITH PASSWORD 'ssp1xpj234gh01ej';
+-- CREATE SCHEMA shopjoy_2604 AUTHORIZATION shopjoy_2604;
+-- GRANT ALL ON SCHEMA shopjoy_2604 TO shopjoy_2604;
+
+
+-- ---------------------------------------------------------
+-- zz_exam1
+-- ---------------------------------------------------------
+-- DROP TABLE shopjoy_2604.zz_exam1;
+
+CREATE TABLE shopjoy_2604.zz_exam1 (
+    exam1_id  varchar(20)   NOT NULL,
+    exam1_nm  varchar(20)   NOT NULL,
+    col11     varchar(200)  NULL,
+    col12     varchar(200)  NULL,
+    col13     varchar(200)  NULL,
+    col14     varchar(200)  NULL,
+    col15     varchar(200)  NULL,
+    reg_id    varchar(20)   NULL,
+    reg_dt    timestamp     NULL,
+    upd_id    varchar(20)   NULL,
+    upd_dt    timestamp     NULL,
+    CONSTRAINT pk_zz_exam1 PRIMARY KEY (exam1_id)
+);
+COMMENT ON TABLE  shopjoy_2604.zz_exam1            IS 'zz_exam1';
+COMMENT ON COLUMN shopjoy_2604.zz_exam1.exam1_id   IS 'PK';
+COMMENT ON COLUMN shopjoy_2604.zz_exam1.exam1_nm   IS '이름';
+COMMENT ON COLUMN shopjoy_2604.zz_exam1.reg_id     IS '등록자';
+COMMENT ON COLUMN shopjoy_2604.zz_exam1.reg_dt     IS '등록일시';
+COMMENT ON COLUMN shopjoy_2604.zz_exam1.upd_id     IS '변경자';
+COMMENT ON COLUMN shopjoy_2604.zz_exam1.upd_dt     IS '변경일시';
+
+
+-- ---------------------------------------------------------
+-- zz_exam2
+-- ---------------------------------------------------------
+-- DROP TABLE shopjoy_2604.zz_exam2;
+
+CREATE TABLE shopjoy_2604.zz_exam2 (
+    exam1_id  varchar(20)   NOT NULL,
+    exam2_id  varchar(20)   NOT NULL,
+    exam2_nm  varchar(20)   NOT NULL,
+    col21     varchar(200)  NULL,
+    col22     varchar(200)  NULL,
+    col23     varchar(200)  NULL,
+    col24     varchar(200)  NULL,
+    col25     varchar(200)  NULL,
+    reg_id    varchar(20)   NULL,
+    reg_dt    timestamp     NULL,
+    upd_id    varchar(20)   NULL,
+    upd_dt    timestamp     NULL,
+    CONSTRAINT pk_zz_exam2 PRIMARY KEY (exam1_id, exam2_id)
+);
+COMMENT ON TABLE  shopjoy_2604.zz_exam2            IS 'zz_exam2';
+COMMENT ON COLUMN shopjoy_2604.zz_exam2.exam1_id   IS 'PK (zz_exam1 참조)';
+COMMENT ON COLUMN shopjoy_2604.zz_exam2.exam2_id   IS 'PK';
+COMMENT ON COLUMN shopjoy_2604.zz_exam2.exam2_nm   IS '이름';
+COMMENT ON COLUMN shopjoy_2604.zz_exam2.reg_id     IS '등록자';
+COMMENT ON COLUMN shopjoy_2604.zz_exam2.reg_dt     IS '등록일시';
+COMMENT ON COLUMN shopjoy_2604.zz_exam2.upd_id     IS '변경자';
+COMMENT ON COLUMN shopjoy_2604.zz_exam2.upd_dt     IS '변경일시';
+
+
+-- ---------------------------------------------------------
+-- zz_exam3
+-- ---------------------------------------------------------
+-- DROP TABLE shopjoy_2604.zz_exam3;
+
+CREATE TABLE shopjoy_2604.zz_exam3 (
+    exam1_id  varchar(20)   NOT NULL,
+    exam2_id  varchar(20)   NOT NULL,
+    exam3_id  varchar(20)   NOT NULL,
+    exam3_nm  varchar(20)   NOT NULL,
+    col31     varchar(200)  NULL,
+    col32     varchar(200)  NULL,
+    col33     varchar(200)  NULL,
+    col34     varchar(200)  NULL,
+    col35     varchar(200)  NULL,
+    reg_id    varchar(20)   NULL,
+    reg_dt    timestamp     NULL,
+    upd_id    varchar(20)   NULL,
+    upd_dt    timestamp     NULL,
+    CONSTRAINT pk_zz_exam3 PRIMARY KEY (exam1_id, exam2_id, exam3_id)
+);
+COMMENT ON TABLE  shopjoy_2604.zz_exam3            IS 'zz_exam3';
+COMMENT ON COLUMN shopjoy_2604.zz_exam3.exam1_id   IS 'PK (zz_exam1 참조)';
+COMMENT ON COLUMN shopjoy_2604.zz_exam3.exam2_id   IS 'PK (zz_exam2 참조)';
+COMMENT ON COLUMN shopjoy_2604.zz_exam3.exam3_id   IS 'PK';
+COMMENT ON COLUMN shopjoy_2604.zz_exam3.exam3_nm   IS '이름';
+COMMENT ON COLUMN shopjoy_2604.zz_exam3.reg_id     IS '등록자';
+COMMENT ON COLUMN shopjoy_2604.zz_exam3.reg_dt     IS '등록일시';
+COMMENT ON COLUMN shopjoy_2604.zz_exam3.upd_id     IS '변경자';
+COMMENT ON COLUMN shopjoy_2604.zz_exam3.upd_dt     IS '변경일시';
+
+
+-- ---------------------------------------------------------
+-- 샘플 데이터: exam1 = 3건 / exam2 = 15건 / exam3 = 40건
+-- ---------------------------------------------------------
+
+-- ===== zz_exam1 (3건) =====
+INSERT INTO shopjoy_2604.zz_exam1 (exam1_id, exam1_nm, col11, col12, col13, col14, col15)
+VALUES ('A001', '카테고리A', 'a11', 'a12', 'a13', 'a14', 'a15');
+INSERT INTO shopjoy_2604.zz_exam1 (exam1_id, exam1_nm, col11, col12, col13, col14, col15)
+VALUES ('B001', '카테고리B', 'b11', 'b12', 'b13', 'b14', 'b15');
+INSERT INTO shopjoy_2604.zz_exam1 (exam1_id, exam1_nm, col11, col12, col13, col14, col15)
+VALUES ('C001', '카테고리C', 'c11', 'c12', 'c13', 'c14', 'c15');
+
+
+-- ===== zz_exam2 (15건) =====
+-- A001 아래 5건
+INSERT INTO shopjoy_2604.zz_exam2 (exam1_id, exam2_id, exam2_nm, col21, col22, col23, col24, col25)
+VALUES ('A001', 'A001-01', '서브A1', 'aa21', 'aa22', 'aa23', 'aa24', 'aa25');
+INSERT INTO shopjoy_2604.zz_exam2 (exam1_id, exam2_id, exam2_nm, col21, col22, col23, col24, col25)
+VALUES ('A001', 'A001-02', '서브A2', 'ab21', 'ab22', 'ab23', 'ab24', 'ab25');
+INSERT INTO shopjoy_2604.zz_exam2 (exam1_id, exam2_id, exam2_nm, col21, col22, col23, col24, col25)
+VALUES ('A001', 'A001-03', '서브A3', 'ac21', 'ac22', 'ac23', 'ac24', 'ac25');
+INSERT INTO shopjoy_2604.zz_exam2 (exam1_id, exam2_id, exam2_nm, col21, col22, col23, col24, col25)
+VALUES ('A001', 'A001-04', '서브A4', 'ad21', 'ad22', 'ad23', 'ad24', 'ad25');
+INSERT INTO shopjoy_2604.zz_exam2 (exam1_id, exam2_id, exam2_nm, col21, col22, col23, col24, col25)
+VALUES ('A001', 'A001-05', '서브A5', 'ae21', 'ae22', 'ae23', 'ae24', 'ae25');
+
+-- B001 아래 6건
+INSERT INTO shopjoy_2604.zz_exam2 (exam1_id, exam2_id, exam2_nm, col21, col22, col23, col24, col25)
+VALUES ('B001', 'B001-01', '서브B1', 'ba21', 'ba22', 'ba23', 'ba24', 'ba25');
+INSERT INTO shopjoy_2604.zz_exam2 (exam1_id, exam2_id, exam2_nm, col21, col22, col23, col24, col25)
+VALUES ('B001', 'B001-02', '서브B2', 'bb21', 'bb22', 'bb23', 'bb24', 'bb25');
+INSERT INTO shopjoy_2604.zz_exam2 (exam1_id, exam2_id, exam2_nm, col21, col22, col23, col24, col25)
+VALUES ('B001', 'B001-03', '서브B3', 'bc21', 'bc22', 'bc23', 'bc24', 'bc25');
+INSERT INTO shopjoy_2604.zz_exam2 (exam1_id, exam2_id, exam2_nm, col21, col22, col23, col24, col25)
+VALUES ('B001', 'B001-04', '서브B4', 'bd21', 'bd22', 'bd23', 'bd24', 'bd25');
+INSERT INTO shopjoy_2604.zz_exam2 (exam1_id, exam2_id, exam2_nm, col21, col22, col23, col24, col25)
+VALUES ('B001', 'B001-05', '서브B5', 'be21', 'be22', 'be23', 'be24', 'be25');
+INSERT INTO shopjoy_2604.zz_exam2 (exam1_id, exam2_id, exam2_nm, col21, col22, col23, col24, col25)
+VALUES ('B001', 'B001-06', '서브B6', 'bf21', 'bf22', 'bf23', 'bf24', 'bf25');
+
+-- C001 아래 4건
+INSERT INTO shopjoy_2604.zz_exam2 (exam1_id, exam2_id, exam2_nm, col21, col22, col23, col24, col25)
+VALUES ('C001', 'C001-01', '서브C1', 'ca21', 'ca22', 'ca23', 'ca24', 'ca25');
+INSERT INTO shopjoy_2604.zz_exam2 (exam1_id, exam2_id, exam2_nm, col21, col22, col23, col24, col25)
+VALUES ('C001', 'C001-02', '서브C2', 'cb21', 'cb22', 'cb23', 'cb24', 'cb25');
+INSERT INTO shopjoy_2604.zz_exam2 (exam1_id, exam2_id, exam2_nm, col21, col22, col23, col24, col25)
+VALUES ('C001', 'C001-03', '서브C3', 'cc21', 'cc22', 'cc23', 'cc24', 'cc25');
+INSERT INTO shopjoy_2604.zz_exam2 (exam1_id, exam2_id, exam2_nm, col21, col22, col23, col24, col25)
+VALUES ('C001', 'C001-04', '서브C4', 'cd21', 'cd22', 'cd23', 'cd24', 'cd25');
+
+
+-- ===== zz_exam3 (40건) =====
+-- A001-01 (3건)
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('A001', 'A001-01', 'A001-01-01', '말단A1-1', 'aaa31', 'aaa32', 'aaa33', 'aaa34', 'aaa35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('A001', 'A001-01', 'A001-01-02', '말단A1-2', 'aab31', 'aab32', 'aab33', 'aab34', 'aab35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('A001', 'A001-01', 'A001-01-03', '말단A1-3', 'aac31', 'aac32', 'aac33', 'aac34', 'aac35');
+
+-- A001-02 (3건)
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('A001', 'A001-02', 'A001-02-01', '말단A2-1', 'aba31', 'aba32', 'aba33', 'aba34', 'aba35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('A001', 'A001-02', 'A001-02-02', '말단A2-2', 'abb31', 'abb32', 'abb33', 'abb34', 'abb35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('A001', 'A001-02', 'A001-02-03', '말단A2-3', 'abc31', 'abc32', 'abc33', 'abc34', 'abc35');
+
+-- A001-03 (3건)
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('A001', 'A001-03', 'A001-03-01', '말단A3-1', 'aca31', 'aca32', 'aca33', 'aca34', 'aca35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('A001', 'A001-03', 'A001-03-02', '말단A3-2', 'acb31', 'acb32', 'acb33', 'acb34', 'acb35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('A001', 'A001-03', 'A001-03-03', '말단A3-3', 'acc31', 'acc32', 'acc33', 'acc34', 'acc35');
+
+-- A001-04 (2건)
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('A001', 'A001-04', 'A001-04-01', '말단A4-1', 'ada31', 'ada32', 'ada33', 'ada34', 'ada35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('A001', 'A001-04', 'A001-04-02', '말단A4-2', 'adb31', 'adb32', 'adb33', 'adb34', 'adb35');
+
+-- A001-05 (2건)
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('A001', 'A001-05', 'A001-05-01', '말단A5-1', 'aea31', 'aea32', 'aea33', 'aea34', 'aea35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('A001', 'A001-05', 'A001-05-02', '말단A5-2', 'aeb31', 'aeb32', 'aeb33', 'aeb34', 'aeb35');
+
+-- B001-01 (3건)
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('B001', 'B001-01', 'B001-01-01', '말단B1-1', 'baa31', 'baa32', 'baa33', 'baa34', 'baa35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('B001', 'B001-01', 'B001-01-02', '말단B1-2', 'bab31', 'bab32', 'bab33', 'bab34', 'bab35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('B001', 'B001-01', 'B001-01-03', '말단B1-3', 'bac31', 'bac32', 'bac33', 'bac34', 'bac35');
+
+-- B001-02 (3건)
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('B001', 'B001-02', 'B001-02-01', '말단B2-1', 'bba31', 'bba32', 'bba33', 'bba34', 'bba35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('B001', 'B001-02', 'B001-02-02', '말단B2-2', 'bbb31', 'bbb32', 'bbb33', 'bbb34', 'bbb35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('B001', 'B001-02', 'B001-02-03', '말단B2-3', 'bbc31', 'bbc32', 'bbc33', 'bbc34', 'bbc35');
+
+-- B001-03 (3건)
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('B001', 'B001-03', 'B001-03-01', '말단B3-1', 'bca31', 'bca32', 'bca33', 'bca34', 'bca35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('B001', 'B001-03', 'B001-03-02', '말단B3-2', 'bcb31', 'bcb32', 'bcb33', 'bcb34', 'bcb35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('B001', 'B001-03', 'B001-03-03', '말단B3-3', 'bcc31', 'bcc32', 'bcc33', 'bcc34', 'bcc35');
+
+-- B001-04 (2건)
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('B001', 'B001-04', 'B001-04-01', '말단B4-1', 'bda31', 'bda32', 'bda33', 'bda34', 'bda35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('B001', 'B001-04', 'B001-04-02', '말단B4-2', 'bdb31', 'bdb32', 'bdb33', 'bdb34', 'bdb35');
+
+-- B001-05 (2건)
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('B001', 'B001-05', 'B001-05-01', '말단B5-1', 'bea31', 'bea32', 'bea33', 'bea34', 'bea35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('B001', 'B001-05', 'B001-05-02', '말단B5-2', 'beb31', 'beb32', 'beb33', 'beb34', 'beb35');
+
+-- B001-06 (2건)
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('B001', 'B001-06', 'B001-06-01', '말단B6-1', 'bfa31', 'bfa32', 'bfa33', 'bfa34', 'bfa35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('B001', 'B001-06', 'B001-06-02', '말단B6-2', 'bfb31', 'bfb32', 'bfb33', 'bfb34', 'bfb35');
+
+-- C001-01 (3건)
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('C001', 'C001-01', 'C001-01-01', '말단C1-1', 'caa31', 'caa32', 'caa33', 'caa34', 'caa35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('C001', 'C001-01', 'C001-01-02', '말단C1-2', 'cab31', 'cab32', 'cab33', 'cab34', 'cab35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('C001', 'C001-01', 'C001-01-03', '말단C1-3', 'cac31', 'cac32', 'cac33', 'cac34', 'cac35');
+
+-- C001-02 (3건)
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('C001', 'C001-02', 'C001-02-01', '말단C2-1', 'cba31', 'cba32', 'cba33', 'cba34', 'cba35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('C001', 'C001-02', 'C001-02-02', '말단C2-2', 'cbb31', 'cbb32', 'cbb33', 'cbb34', 'cbb35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('C001', 'C001-02', 'C001-02-03', '말단C2-3', 'cbc31', 'cbc32', 'cbc33', 'cbc34', 'cbc35');
+
+-- C001-03 (3건)
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('C001', 'C001-03', 'C001-03-01', '말단C3-1', 'cca31', 'cca32', 'cca33', 'cca34', 'cca35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('C001', 'C001-03', 'C001-03-02', '말단C3-2', 'ccb31', 'ccb32', 'ccb33', 'ccb34', 'ccb35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('C001', 'C001-03', 'C001-03-03', '말단C3-3', 'ccc31', 'ccc32', 'ccc33', 'ccc34', 'ccc35');
+
+-- C001-04 (3건)
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('C001', 'C001-04', 'C001-04-01', '말단C4-1', 'cda31', 'cda32', 'cda33', 'cda34', 'cda35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('C001', 'C001-04', 'C001-04-02', '말단C4-2', 'cdb31', 'cdb32', 'cdb33', 'cdb34', 'cdb35');
+INSERT INTO shopjoy_2604.zz_exam3 (exam1_id, exam2_id, exam3_id, exam3_nm, col31, col32, col33, col34, col35)
+VALUES ('C001', 'C001-04', 'C001-04-03', '말단C4-3', 'cdc31', 'cdc32', 'cdc33', 'cdc34', 'cdc35');
+
+COMMIT;

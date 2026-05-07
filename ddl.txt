@@ -1,0 +1,58 @@
+-- shopjoy_2604.zz_exam1 definition
+
+-- Drop table
+
+-- DROP TABLE shopjoy_2604.zz_exam1;
+
+CREATE TABLE shopjoy_2604.zz_exam1 (
+	exam1_id varchar(20) NOT NULL,
+	exam1_nm varchar(20) NOT NULL,
+	col11 varchar(200) NULL,
+	col12 varchar(200) NULL,
+	col13 varchar(200) NULL,
+	col14 varchar(200) NULL,
+	col15 varchar(200) NULL,
+	CONSTRAINT pk_zz_exam1 PRIMARY KEY (exam1_id)
+);
+COMMENT ON TABLE shopjoy_2604.zz_exam1 IS 'zz_exam1';
+
+
+-- shopjoy_2604.zz_exam2 definition
+
+-- Drop table
+
+-- DROP TABLE shopjoy_2604.zz_exam2;
+
+CREATE TABLE shopjoy_2604.zz_exam2 (
+	exam1_id varchar(20) NOT NULL,
+	exam2_id varchar(20) NOT NULL,
+	exam2_nm varchar(20) NOT NULL,
+	col21 varchar(200) NULL,
+	col22 varchar(200) NULL,
+	col23 varchar(200) NULL,
+	col24 varchar(200) NULL,
+	col25 varchar(200) NULL,
+	CONSTRAINT pk_zz_exam2 PRIMARY KEY (exam1_id, exam2_id)
+);
+COMMENT ON TABLE shopjoy_2604.zz_exam2 IS 'zz_exam2';
+
+
+-- shopjoy_2604.zz_exam3 definition
+
+-- Drop table
+
+-- DROP TABLE shopjoy_2604.zz_exam3;
+
+CREATE TABLE shopjoy_2604.zz_exam3 (
+	exam1_id varchar(20) NOT NULL,
+	exam2_id varchar(20) NOT NULL,
+	exam3_id varchar(20) NOT NULL,
+	exam3_nm varchar(20) NOT NULL,
+	col31 varchar(200) NULL,
+	col32 varchar(200) NULL,
+	col33 varchar(200) NULL,
+	col34 varchar(200) NULL,
+	col35 varchar(200) NULL,
+	CONSTRAINT pk_zz_exam3 PRIMARY KEY (exam1_id, exam2_id, exam3_id)
+);
+COMMENT ON TABLE shopjoy_2604.zz_exam3 IS 'zz_exam3';

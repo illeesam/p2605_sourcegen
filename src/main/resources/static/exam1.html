@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Exam1 CRUD</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="common.css">
+</head>
+<body>
+<div id="app">
+    <div class="container">
+        <h1>Exam1 (단일 PK)</h1>
+
+        <!-- 검색 영역 -->
+        <div class="card">
+            <h2>검색 조건</h2>
+            <div class="grid">
+                <div class="field" v-for="f in meta.searchFields" :key="f.name">
+                    <label>{{f.label}}</label>
+                    <input v-model="search[f.name]" :placeholder="f.label">
+                </div>
+                <div class="field">
+                    <label>페이지크기</label>
+                    <select v-model.number="search.pageSize">
+                        <option :value="5">5</option>
+                        <option :value="10">10</option>
+                        <option :value="20">20</option>
+                        <option :value="50">50</option>
+                    </select>
+                </div>
+            </div>
+            <div class="toolbar-right" style="margin-top:12px;justify-content:flex-end;display:flex;">
+                <button class="btn btn-primary" @click="searchPage(1)">검색</button>
+                <button class="btn btn-secondary" @click="resetSearch">초기화</button>
+            </div>
+        </div>
+
+        <!-- 목록 영역 -->
+        <div class="card">
+            <h2>목록</h2>
+            <div class="toolbar">
+                <span class="toolbar-left">총 {{page.pageTotalCount}}건 / {{page.pageTotalPages || 0}}페이지</span>
+                <div class="toolbar-right">
+                    <button class="btn btn-success" @click="openInsert">+ 신규등록</button>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th v-for="col in meta.columns" :key="col.key"
+                            :class="['sortable', sortDir(col.key) ? 'sort-' + sortDir(col.key) : '']"
+                            @click="toggleSort(col.key)">
+                            {{col.label}}<span class="sort-arrow"></span>
+                        </th>
+                        <th style="width:130px">관리</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-if="!list.length">
+                        <td :colspan="meta.columns.length + 1" class="empty">데이터 없음</td>
+                    </tr>
+                    <tr v-for="row in list" :key="rowKey(row)">
+                        <td v-for="col in meta.columns" :key="col.key">
+                            <span>{{row[col.key]}}</span>
+                            <span v-if="col.parentNmKey && row[col.parentNmKey]" class="nm">
+                                / {{row[col.parentNmKey]}}
+                            </span>
+                        </td>
+                        <td class="actions">
+                            <button class="btn btn-warning btn-sm" @click="openUpdate(row)">수정</button>
+                            <button class="btn btn-danger btn-sm" @click="deleteRow(row)">삭제</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="pagination" v-if="page.pageTotalPages > 0">
+                <button class="page-btn" :disabled="page.pageNo<=1" @click="searchPage(1)">«</button>
+                <button class="page-btn" :disabled="page.pageNo<=1" @click="searchPage(page.pageNo-1)">‹</button>
+                <button class="page-btn" v-for="p in pageRange" :key="p"
+                        :class="{active: p===page.pageNo}" @click="searchPage(p)">{{p}}</button>
+                <button class="page-btn" :disabled="page.pageNo>=page.pageTotalPages" @click="searchPage(page.pageNo+1)">›</button>
+                <button class="page-btn" :disabled="page.pageNo>=page.pageTotalPages" @click="searchPage(page.pageTotalPages)">»</button>
+            </div>
+        </div>
+
+        <!-- 모달 -->
+        <div class="modal-overlay" v-if="modal.show" @click.self="modal.show=false">
+            <div class="modal">
+                <h3>{{modal.mode==='insert' ? '신규 등록' : '수정'}} - Exam1</h3>
+                <div class="field" v-for="f in meta.formFields" :key="f.name">
+                    <label>{{f.label}}{{f.required ? ' *' : ''}}</label>
+                    <input v-model="modal.form[f.name]"
+                           :disabled="modal.mode==='update' && f.pk"
+                           :placeholder="f.required ? '필수' : ''">
+                </div>
+                <div class="modal-btns">
+                    <button class="btn btn-secondary" @click="modal.show=false">취소</button>
+                    <button class="btn btn-primary" @click="saveModal">저장</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 디버그 패널 (요청/응답) -->
+        <div class="debug">
+            <div class="debug-header">
+                <h2>요청/응답 정보</h2>
+                <span class="debug-status"
+                      :class="debug.error ? 'err' : (debug.status ? 'ok' : '')">
+                    <template v-if="debug.status">
+                        {{debug.status}} ({{debug.durationMs}} ms)
+                    </template>
+                    <template v-else>대기 중</template>
+                </span>
+            </div>
+            <div class="debug-body">
+                <div class="debug-row">
+                    <div class="debug-label">요청 URL</div>
+                    <div class="debug-value">
+                        <span v-if="debug.method" class="debug-method" :class="debug.method">{{debug.method}}</span>
+                        <span v-if="debug.url">{{debug.url}}</span>
+                        <span v-else class="debug-empty">아직 요청 없음</span>
+                    </div>
+                </div>
+                <div class="debug-row">
+                    <div class="debug-label">파라미터</div>
+                    <div class="debug-value">
+                        <pre v-if="debug.params && Object.keys(debug.params).length">{{fmt(debug.params)}}</pre>
+                        <span v-else class="debug-empty">(없음)</span>
+                    </div>
+                </div>
+                <div class="debug-row">
+                    <div class="debug-label">요청 본문</div>
+                    <div class="debug-value">
+                        <pre v-if="debug.body">{{fmt(debug.body)}}</pre>
+                        <span v-else class="debug-empty">(없음)</span>
+                    </div>
+                </div>
+                <div class="debug-row">
+                    <div class="debug-label">응답 정보</div>
+                    <div class="debug-value">
+                        <pre v-if="debug.response !== null && debug.response !== undefined">{{fmt(debug.response)}}</pre>
+                        <span v-else class="debug-empty">(없음)</span>
+                    </div>
+                </div>
+                <div class="debug-row" v-if="debug.error">
+                    <div class="debug-label" style="color:#e74c3c;">오류</div>
+                    <div class="debug-value" style="color:#e74c3c;">{{debug.error}}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 토스트 -->
+        <div v-if="toast" class="toast" :class="toast.type==='ok' ? 'toast-ok' : 'toast-err'">
+            {{toast.text}}
+        </div>
+    </div>
+</div>
+
+<script src="common.js"></script>
+<script>
+const META = {
+    endpoint: 'exam1',
+    pk: ['exam1Id'],
+    searchFields: [
+        { name: 'exam1Id', label: 'exam1_id' },
+        { name: 'exam1Nm', label: 'exam1_nm' },
+        { name: 'col11', label: 'col11' },
+        { name: 'col12', label: 'col12' },
+        { name: 'col13', label: 'col13' },
+        { name: 'col14', label: 'col14' },
+        { name: 'col15', label: 'col15' },
+    ],
+    columns: [
+        { key: 'exam1Id', label: 'exam1_id' },
+        { key: 'exam1Nm', label: 'exam1_nm' },
+        { key: 'col11', label: 'col11' },
+        { key: 'col12', label: 'col12' },
+        { key: 'col13', label: 'col13' },
+        { key: 'col14', label: 'col14' },
+        { key: 'col15', label: 'col15' },
+        { key: 'regId', label: '등록자' },
+        { key: 'regDt', label: '등록일시' },
+        { key: 'updId', label: '변경자' },
+        { key: 'updDt', label: '변경일시' },
+    ],
+    formFields: [
+        { name: 'exam1Id', label: 'exam1_id', required: true, pk: true },
+        { name: 'exam1Nm', label: 'exam1_nm', required: true },
+        { name: 'col11', label: 'col11' },
+        { name: 'col12', label: 'col12' },
+        { name: 'col13', label: 'col13' },
+        { name: 'col14', label: 'col14' },
+        { name: 'col15', label: 'col15' },
+    ],
+    emptyForm: () => ({ exam1Id:'', exam1Nm:'', col11:'', col12:'', col13:'', col14:'', col15:'' }),
+    emptySearch: () => ({ exam1Id:'', exam1Nm:'', col11:'', col12:'', col13:'', col14:'', col15:'',
+        pageNo:1, pageSize:10, sortBy:'' }),
+    idPath: row => `/${row.exam1Id}`
+};
+
+createExamApp(META).mount('#app');
+</script>
+</body>
+</html>

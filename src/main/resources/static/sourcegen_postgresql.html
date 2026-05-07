@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Source Generator - PostgreSQL</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Prism.js (코드 컬러 하이라이트) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-jsx.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-dart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-kotlin.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-swift.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-groovy.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .sg-tabs { display: flex; gap: 2px; border-bottom: 2px solid #34495e; margin-bottom: 0; flex-wrap: wrap; }
+        .sg-tab { padding: 6px 14px; background: #ecf0f1; cursor: pointer; border: none;
+            font-size: 12px; color: #555; }
+        .sg-tab.active { background: #34495e; color: #fff; }
+        .sg-tab.cat { font-weight: bold; background: #d5dbdb; }
+        .sg-tab.cat.active { background: #2c3e50; }
+
+        /* === DDL/결과 탭 (10개) === */
+        .sg-ddl-tabs { display: flex; gap: 2px; border-bottom: 2px solid #34495e;
+            margin-bottom: 0; flex-wrap: wrap; }
+        .sg-ddl-tabs .ddl-tab { padding: 6px 12px; background: #ecf0f1; cursor: pointer;
+            border: none; font-size: 12px; color: #555;
+            border-radius: 4px 4px 0 0; min-width: 56px; position: relative; }
+        .sg-ddl-tabs .ddl-tab.active { background: #4f7df3; color: #fff; font-weight: bold; }
+        .sg-ddl-tabs .ddl-tab.has-data { background: #d5dbdb; color: #2c3e50; font-weight: 600; }
+        .sg-ddl-tabs .ddl-tab.has-data.active { background: #4f7df3; color: #fff; }
+        .sg-ddl-tabs .ddl-tab .ddl-dot {
+            display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+            background: #27ae60; margin-left: 4px; vertical-align: middle; }
+
+        /* 좌측 파일 탭 + 우측 코드 영역 레이아웃 */
+        .sg-body { display: flex; gap: 0; align-items: stretch; }
+        .sg-files { display: flex; flex-direction: column; gap: 0;
+            min-width: 390px; max-width: 480px;
+            background: #fff; border-right: 2px solid #34495e;
+            min-height: 850px; max-height: 850px;
+            overflow-y: auto; }
+        .sg-files .sg-tab { text-align: left !important; padding: 8px 10px !important;
+            min-height: 32px !important; box-sizing: border-box !important;
+            border: 0 !important; border-bottom: 1px solid #ecf0f1 !important;
+            background: #fff !important;
+            color: #1a252f !important; font-size: 12px !important;
+            font-family: inherit !important; font-weight: normal !important;
+            line-height: 1.6 !important;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            cursor: pointer; width: 100%; display: block;
+            text-transform: none !important; letter-spacing: 0 !important;
+            opacity: 1 !important; filter: none !important;
+            text-shadow: none !important; box-shadow: none !important;
+            -webkit-text-fill-color: #1a252f !important; }
+        .sg-files .sg-tab:hover { background: #f0f4f8 !important; color: #000 !important;
+            -webkit-text-fill-color: #000 !important; }
+        .sg-files .sg-tab.active { background: #4f7df3 !important; color: #fff !important;
+            -webkit-text-fill-color: #fff !important; }
+        .sg-grp { padding: 3px 8px; background: #2c3e50; color: #ecf0f1;
+            font-size: 11px; font-weight: bold; letter-spacing: 1px;
+            text-transform: uppercase; border-bottom: 1px solid #34495e; }
+        .sg-content { flex: 1; min-width: 0; overflow: hidden; }
+        .sg-fe { color: #2980b9; font-weight: bold; margin-right: 4px; }
+        .sg-be { color: #c0392b; font-weight: bold; margin-right: 4px; }
+        .sg-jpa { color: #16a085; font-weight: bold; margin-right: 4px; }
+        .sg-fw  { color: #8e44ad; font-weight: bold; margin-right: 4px; }
+        .sg-files .sg-tab.active .sg-fe,
+        .sg-files .sg-tab.active .sg-be,
+        .sg-files .sg-tab.active .sg-jpa,
+        .sg-files .sg-tab.active .sg-fw { color: #fff59d; }
+        /* 결과 코드 영역 - 50줄 분량 고정 */
+        .sg-code { padding: 0 !important; font-size: 12px;
+            border-radius: 0 0 6px 6px !important; margin: 0 !important;
+            min-height: 850px;
+            max-height: 850px !important;
+            overflow: auto !important; }
+        .sg-code code { font-family: 'Consolas', 'Monaco', monospace; font-size: 12px;
+            white-space: pre; }
+        pre[class*="language-"] { margin: 0 !important; border-radius: 0 0 6px 6px !important;
+            min-height: 850px !important;
+            max-height: 850px !important;
+            overflow: auto !important; }
+        pre.line-numbers { padding-left: 4.5em !important;
+            max-height: 850px !important; }
+
+        /* DDL 입력 textarea */
+        .sg-input { display: block;
+            width: 100%; min-width: 300px; min-height: 400px;
+            padding: 10px; font-family: monospace; font-size: 12px;
+            border: 1px solid #d0d7de; border-radius: 4px;
+            resize: both !important; overflow: auto;
+            box-sizing: border-box; }
+        .sg-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .sg-row label { min-width: 110px; font-size: 13px; color: #555; }
+        .sg-row input { flex: 1; padding: 6px 10px; border: 1px solid #d0d7de; border-radius: 4px; }
+        /* 옵션 영역: label-input 쌍 6열 */
+        .sg-opts { display: grid;
+            grid-template-columns: auto 1fr auto 1fr auto 1fr;
+            gap: 8px 10px; align-items: center; }
+        .sg-opts > .sg-row { display: contents; }
+        .sg-opts > .sg-row > label { min-width: 90px; }
+        .sg-opts > .sg-row > input { width: 100%; padding: 6px 10px;
+            border: 1px solid #d0d7de; border-radius: 4px; font-size: 13px; }
+        .sg-opts > .sg-row > input:disabled { background: #f1f3f5; color: #95a5a6; cursor: not-allowed; }
+        .sg-empty { padding: 24px; text-align: center; color: #95a5a6; }
+        .sg-fileinfo { padding: 6px 12px; background: #34495e; color: #ecf0f1;
+            font-size: 11px; font-family: monospace;
+            display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+        .sg-fileinfo .sg-actions { display: flex; gap: 6px; }
+        .sg-fileinfo .sg-actions button { padding: 3px 10px; font-size: 11px;
+            background: #4f7df3; color: #fff; border: none; border-radius: 3px;
+            cursor: pointer; font-weight: bold; }
+        .sg-fileinfo .sg-actions button:hover { opacity: 0.85; }
+        .sg-fileinfo .sg-actions button.dl { background: #27ae60; }
+        .sg-fileinfo .sg-actions button.pv { background: #9b59b6; }
+        .sg-eye { float: right; margin-left: 6px; cursor: pointer; opacity: 0.55;
+                  font-size: 13px; padding: 0 4px; border-radius: 3px; }
+        .sg-eye:hover { opacity: 1; background: rgba(255,255,255,0.25); }
+        .sg-fileinfo .sg-actions .copied { color: #2ecc71; font-size: 10px; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="container">
+        <h1>Source Generator (PostgreSQL DDL → 전체 소스, 최대 10 테이블)</h1>
+
+        <!-- ========== Base Package (모든 탭 공유) ========== -->
+        <div class="card" style="display:flex;align-items:center;gap:12px;">
+            <label style="font-weight:bold;min-width:100px;">Base Package</label>
+            <input v-model="tabs[0].opts.basePackage" placeholder="com.exam.app"
+                   style="flex:1;padding:6px 10px;border:1px solid #d0d7de;border-radius:4px;">
+            <span style="font-size:11px;color:#7f8c8d;">모든 탭에 공유 적용됩니다</span>
+        </div>
+
+        <!-- ========== DDL 탭 (10개) ========== -->
+        <div class="card">
+            <div class="sg-ddl-tabs">
+                <button v-for="(t, i) in tabs" :key="i" class="ddl-tab"
+                        :class="{active: activeTabIdx===i, 'has-data': hasData(i)}"
+                        @click="activeTabIdx = i">
+                    탭 {{i+1}}<span v-if="hasData(i)" class="ddl-dot"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ========== 옵션 (활성 탭 기준) ========== -->
+        <div class="card">
+            <h2>옵션 <span style="font-size:11px;color:#7f8c8d;font-weight:normal;">
+                (DDL 입력 시 자동 추출)
+            </span></h2>
+            <div class="sg-opts">
+                <div class="sg-row">
+                    <label>Schema</label>
+                    <input v-model="curOpts.schema" placeholder="(DDL에서 자동)">
+                </div>
+                <div class="sg-row">
+                    <label>Table</label>
+                    <input v-model="curOpts.table" placeholder="(DDL에서 자동)" disabled>
+                </div>
+                <div class="sg-row">
+                    <label>Class Name</label>
+                    <input v-model="curOpts.className" placeholder="(테이블명에서 자동)">
+                </div>
+                <div class="sg-row">
+                    <label>Endpoint</label>
+                    <input v-model="curOpts.endpoint" placeholder="(테이블명에서 자동)">
+                </div>
+                <div class="sg-row">
+                    <label>Swagger Tag</label>
+                    <input v-model="curOpts.tag" placeholder="(Class Name 과 동일)">
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== DDL 입력 (활성 탭 기준) ========== -->
+        <div class="card">
+            <h2>PostgreSQL DDL 입력 — 탭 {{activeTabIdx + 1}}</h2>
+            <textarea class="sg-input" v-model="curTab.ddl"
+                      placeholder="CREATE TABLE schema.tbl ( ... );"></textarea>
+            <div style="margin-top:10px;text-align:right;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+                <button class="btn btn-secondary" @click="handleLoadSample('exam1')">샘플 zz_exam1</button>
+                <button class="btn btn-secondary" @click="handleLoadSample('exam2')">샘플 zz_exam2</button>
+                <button class="btn btn-secondary" @click="handleLoadSample('exam3')">샘플 zz_exam3</button>
+                <span style="flex:1;"></span>
+                <button class="btn btn-warning" @click="handleClearTab">현재탭 초기화</button>
+                <button class="btn btn-warning" @click="handleResetAll">전체 초기화</button>
+                <button class="btn btn-primary" @click="handleGenerate">생성 (모든 탭)</button>
+                <button class="btn btn-success" @click="handleDownloadZip"
+                        :disabled="!totalFileCount">ZIP 다운로드 (전체)</button>
+            </div>
+            <div v-if="curTab.error" class="msg msg-error" style="margin-top:10px;">{{curTab.error}}</div>
+        </div>
+
+        <!-- ========== 생성 결과 (활성 탭의 결과만 표시) ========== -->
+        <div class="card" v-if="totalFileCount">
+            <h2 style="display:flex;justify-content:space-between;align-items:center;">
+                <span>생성 결과 — 탭 {{activeTabIdx + 1}}
+                    ({{Object.keys(curTab.files).length}}개 파일, 전체 {{totalFileCount}}개)</span>
+                <span style="font-size:11px;color:#7f8c8d;font-weight:normal;"
+                      v-if="curTab.generatedAt">생성: {{curTab.generatedAt}}</span>
+            </h2>
+            <!-- 결과 탭 토글 (생성된 탭만 노출) -->
+            <div class="sg-ddl-tabs" v-if="resultTabIndices.length > 1" style="margin-bottom:10px;">
+                <button v-for="i in resultTabIndices" :key="'r'+i" class="ddl-tab"
+                        :class="{active: activeTabIdx===i}" @click="activeTabIdx = i">
+                    탭 {{i+1}} ({{Object.keys(tabs[i].files).length}})
+                </button>
+            </div>
+            <div class="sg-body" v-if="Object.keys(curTab.files).length">
+                <div class="sg-files">
+                    <template v-for="grp in groupedFiles" :key="grp.title">
+                        <div class="sg-grp">{{grp.title}}</div>
+                        <button class="sg-tab" v-for="fn in grp.files" :key="fn"
+                                :class="{active: curTab.active===fn}" @click="curTab.active=fn">
+                            <span v-for="lab in fmLabelsOf(fn)" :key="lab.text" :class="lab.cls">{{lab.text}}</span>
+                            {{fmShortName(fn)}}
+                            <span v-if="canPreview(fn)" class="sg-eye" title="미리보기"
+                                  @click.stop="previewFile(fn)">👁</span>
+                        </button>
+                    </template>
+                </div>
+                <div class="sg-content">
+                    <div class="sg-fileinfo" v-if="curTab.active">
+                        <span>{{curTab.active}}</span>
+                        <div class="sg-actions">
+                            <span v-if="copied" class="copied">✓ 복사됨</span>
+                            <button v-if="canPreview(curTab.active)" class="pv" @click="previewFile(curTab.active)">👁 미리보기</button>
+                            <button @click="handleCopyCode">복사</button>
+                            <button class="dl" @click="handleDownloadFile">다운로드</button>
+                        </div>
+                    </div>
+                    <pre class="sg-code line-numbers" v-if="curTab.active" :key="curTab.active"
+                         :class="'language-' + fmLangOf(curTab.active)" ref="codeBox"><code
+                         :class="'language-' + fmLangOf(curTab.active)">{{curTab.files[curTab.active]}}</code></pre>
+                    <div v-else class="sg-empty">탭을 선택하세요</div>
+                </div>
+            </div>
+            <div v-else class="sg-empty">현재 탭은 비어 있습니다 (DDL 입력 후 [생성])</div>
+        </div>
+    </div>
+</div>
+
+<!-- 분리된 생성기 모듈들 -->
+<script src="sourcegen.js"></script>
+<script src="sourcegen_be_jpa.js"></script>
+<script src="sourcegen_be_mybatis.js"></script>
+<script src="sourcegen_fe_vue3.js"></script>
+<script src="sourcegen_fe_react.js"></script>
+<script src="sourcegen_fe_vue3_cdn.js"></script>
+<script src="sourcegen_fe_react_cdn.js"></script>
+<script src="sourcegen_fe_svelte.js"></script>
+<script src="sourcegen_fe_svelte_cdn.js"></script>
+<script src="sourcegen_be_python.js"></script>
+<script src="sourcegen_fe_pyscript_cdn.js"></script>
+<script src="sourcegen_be_csharp_efcore.js"></script>
+<script src="sourcegen_be_csharp_dapper.js"></script>
+<script src="sourcegen_be_nestjs10.js"></script>
+<script src="sourcegen_be_expressjs4.js"></script>
+<script src="sourcegen_fe_flutter.js"></script>
+<script src="sourcegen_fe_react_native.js"></script>
+<script src="sourcegen_fe_android_compose.js"></script>
+<script src="sourcegen_fe_ios_swiftui.js"></script>
+<script src="sourcegen_full_nuxt4.js"></script>
+<script src="sourcegen_full_nextjs15.js"></script>
+<!-- UI 보조 모듈 -->
+<script src="sourcegen_ui_preview.js"></script>
+<script src="sourcegen_ui_indexgen.js"></script>
+<script>
+const { createApp, ref, reactive, computed, watch, nextTick, onMounted } = Vue;
+
+const TAB_COUNT = 10;
+
+function utSetObj(target, src) {
+    Object.keys(target).forEach(k => delete target[k]);
+    if (src) Object.assign(target, src);
+}
+function utMakeTab() {
+    return {
+        ddl: '',
+        opts: { schema: '', table: '', className: '', endpoint: '', tag: '',
+                // basePackage 는 1탭(tabs[0]) 만 의미 있음. 나머지 탭에도 필드는 있지만 비움.
+                basePackage: '' },
+        files: {},
+        active: '',
+        error: '',
+        generatedAt: ''
+    };
+}
+
+const SAMPLES = {
+    exam1: `CREATE TABLE shopjoy_2604.zz_exam1 (
+    exam1_id  VARCHAR(20)   NOT NULL,
+    exam1_nm  VARCHAR(20)   NOT NULL,
+    col11     VARCHAR(200)  NULL,
+    col12     VARCHAR(200)  NULL,
+    col13     VARCHAR(200)  NULL,
+    col14     VARCHAR(200)  NULL,
+    col15     VARCHAR(200)  NULL,
+    reg_id    VARCHAR(20)   NULL,
+    reg_dt    TIMESTAMP      NULL,
+    upd_id    VARCHAR(20)   NULL,
+    upd_dt    TIMESTAMP      NULL,
+    CONSTRAINT pk_zz_exam1 PRIMARY KEY (exam1_id)
+);
+COMMENT ON TABLE  shopjoy_2604.zz_exam1            IS 'zz_exam1';
+COMMENT ON COLUMN shopjoy_2604.zz_exam1.exam1_id   IS 'PK';
+COMMENT ON COLUMN shopjoy_2604.zz_exam1.exam1_nm   IS '이름';
+`,
+    exam2: `CREATE TABLE shopjoy_2604.zz_exam2 (
+    exam1_id  VARCHAR(20)   NOT NULL,
+    exam2_id  VARCHAR(20)   NOT NULL,
+    exam2_nm  VARCHAR(20)   NOT NULL,
+    col21     VARCHAR(200)  NULL,
+    col22     VARCHAR(200)  NULL,
+    col23     VARCHAR(200)  NULL,
+    col24     VARCHAR(200)  NULL,
+    col25     VARCHAR(200)  NULL,
+    reg_id    VARCHAR(20)   NULL,
+    reg_dt    TIMESTAMP      NULL,
+    upd_id    VARCHAR(20)   NULL,
+    upd_dt    TIMESTAMP      NULL,
+    CONSTRAINT pk_zz_exam2 PRIMARY KEY (exam1_id, exam2_id)
+);
+COMMENT ON TABLE  shopjoy_2604.zz_exam2            IS 'zz_exam2';
+COMMENT ON COLUMN shopjoy_2604.zz_exam2.exam1_id   IS 'PK (zz_exam1 참조)';
+COMMENT ON COLUMN shopjoy_2604.zz_exam2.exam2_id   IS 'PK';
+COMMENT ON COLUMN shopjoy_2604.zz_exam2.exam2_nm   IS '이름';
+`,
+    exam3: `CREATE TABLE shopjoy_2604.zz_exam3 (
+    exam1_id  VARCHAR(20)   NOT NULL,
+    exam2_id  VARCHAR(20)   NOT NULL,
+    exam3_id  VARCHAR(20)   NOT NULL,
+    exam3_nm  VARCHAR(20)   NOT NULL,
+    col31     VARCHAR(200)  NULL,
+    col32     VARCHAR(200)  NULL,
+    col33     VARCHAR(200)  NULL,
+    col34     VARCHAR(200)  NULL,
+    col35     VARCHAR(200)  NULL,
+    reg_id    VARCHAR(20)   NULL,
+    reg_dt    TIMESTAMP      NULL,
+    upd_id    VARCHAR(20)   NULL,
+    upd_dt    TIMESTAMP      NULL,
+    CONSTRAINT pk_zz_exam3 PRIMARY KEY (exam1_id, exam2_id, exam3_id)
+);
+COMMENT ON TABLE  shopjoy_2604.zz_exam3            IS 'zz_exam3';
+COMMENT ON COLUMN shopjoy_2604.zz_exam3.exam1_id   IS 'PK (zz_exam1 참조)';
+COMMENT ON COLUMN shopjoy_2604.zz_exam3.exam2_id   IS 'PK (zz_exam2 참조)';
+COMMENT ON COLUMN shopjoy_2604.zz_exam3.exam3_id   IS 'PK';
+COMMENT ON COLUMN shopjoy_2604.zz_exam3.exam3_nm   IS '이름';
+`
+};
+
+createApp({
+    setup() {
+        // 10개 탭 초기화 — tabs[0].opts.basePackage 만 유효, 나머지는 1탭 값 공유
+        const tabs = reactive(Array.from({ length: TAB_COUNT }, () => utMakeTab()));
+        tabs[0].opts.basePackage = 'com.exam.app';
+
+        const activeTabIdx = ref(0);
+        const copied = ref(false);
+
+        const curTab  = computed(() => tabs[activeTabIdx.value]);
+        const curOpts = computed(() => curTab.value.opts);
+
+        /** 탭에 DDL 데이터 있는지 (점 표시용) */
+        const hasData = (i) => !!(tabs[i].ddl && tabs[i].ddl.trim());
+        /** 결과가 생성된 탭 인덱스 목록 */
+        const resultTabIndices = computed(() =>
+            tabs.map((t, i) => Object.keys(t.files).length ? i : -1).filter(i => i >= 0)
+        );
+        /** 전체 파일 개수 (모든 탭 합산) */
+        const totalFileCount = computed(() =>
+            tabs.reduce((sum, t) => sum + Object.keys(t.files).length, 0)
+        );
+
+        /** DDL → 옵션 자동 추출 */
+        function fnExtractOpts(ddlText, tabOpts) {
+            const m = ddlText.match(/CREATE\s+TABLE\s+(?:(\w+)\.)?(\w+)/i);
+            if (!m) {
+                return;
+            }
+            const schema = m[1] || '';
+            const table = m[2];
+            const className = table.toLowerCase().split('_')
+                .map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
+            const endpoint = table.replace(/^[a-z]+_/, '');
+            tabOpts.schema = schema;
+            tabOpts.table = table;
+            tabOpts.className = className;
+            tabOpts.endpoint = endpoint;
+            tabOpts.tag = className;
+        }
+
+        // 각 탭의 DDL 변경 시 옵션 자동 갱신 (10개 watch)
+        tabs.forEach((t, i) => {
+            watch(() => tabs[i].ddl, (v) => {
+                if (v) {
+                    fnExtractOpts(v, tabs[i].opts);
+                }
+            });
+        });
+
+        // 그룹별로 묶어서 좌측에 카테고리 헤더 + 파일 리스트 표시 (현재 탭 기준)
+        const groupedFiles = computed(() => {
+            const all = Object.keys(curTab.value.files);
+            const groups = [
+                { title: 'Backend (JPA)',          test: n => n.startsWith('backend_jpa/') },
+                { title: 'Backend (MyBatis)',      test: n => n.startsWith('backend_mybatis/') },
+                { title: 'Backend (Python)',       test: n => n.startsWith('backend_python/') },
+                { title: 'Backend (C# EF Core)',   test: n => n.startsWith('backend_csharp_efcore/') },
+                { title: 'Backend (C# Dapper)',    test: n => n.startsWith('backend_csharp_dapper/') },
+                { title: 'Backend (NestJS 10)',    test: n => n.startsWith('backend_nestjs/') },
+                { title: 'Backend (Express 4)',    test: n => n.startsWith('backend_expressjs/') },
+                { title: 'Vue3 CDN (with common)', test: n => n.startsWith('frontend_vue3cdn_with_common/') },
+                { title: 'Vue3 CDN (standalone)',  test: n => n.startsWith('frontend_vue3cdn_standalone/') },
+                { title: 'Vue3 SFC',               test: n => n.startsWith('frontend_vue3/') },
+                { title: 'React',                  test: n => n.startsWith('frontend_react/') },
+                { title: 'React CDN (standalone)', test: n => n.startsWith('frontend_react_cdn_standalone/') },
+                { title: 'Svelte',                  test: n => n.startsWith('frontend_svelte/') },
+                { title: 'Svelte CDN (standalone)', test: n => n.startsWith('frontend_svelte_cdn_standalone/') },
+                { title: 'PyScript CDN (standalone)', test: n => n.startsWith('frontend_pyscript_cdn_standalone/') },
+                { title: 'Flutter (Mobile)',       test: n => n.startsWith('frontend_flutter/') },
+                { title: 'React Native (Mobile)',  test: n => n.startsWith('frontend_react_native/') },
+                { title: 'Android (Compose)',      test: n => n.startsWith('frontend_android/') },
+                { title: 'iOS (SwiftUI)',          test: n => n.startsWith('frontend_ios/') },
+                { title: 'Nuxt 4 + Prisma (Fullstack)',     test: n => n.startsWith('fullstack_nuxt/') },
+                { title: 'Next.js 15 + Prisma (Fullstack)', test: n => n.startsWith('fullstack_nextjs/') },
+                { title: 'DDL',                    test: n => n.startsWith('ddl/') }
+            ];
+            return groups
+                .map(g => ({ title: g.title, files: all.filter(g.test) }))
+                .filter(g => g.files.length > 0);
+        });
+
+        function fmShortName(fn) {
+            // 첫 세그먼트(prefix: backend_jpa/, frontend_flutter/ 등) 제거 후 나머지 전체 경로
+            // 예: 'backend_jpa/repository/impl/X.java' → 'repository/impl/X.java'
+            //     'frontend_flutter/lib/models/exam1.dart' → 'lib/models/exam1.dart'
+            //     'frontend_flutter/pubspec.yaml' → 'pubspec.yaml'
+            const idx = fn.indexOf('/');
+            if (idx < 0) {
+                return fn;
+            }
+            return fn.substring(idx + 1);
+        }
+
+        /** 파일 라벨 배열 [{text, cls}] - 다중 prefix */
+        function fmLabelsOf(fn) {
+            if (fn.startsWith('ddl/')) {
+                return [];
+            }
+            if (fn.startsWith('frontend_vue3cdn_with_common/')) {
+                return [{ text: '[FE]', cls: 'sg-fe' }, { text: '[vue3cdn]', cls: 'sg-fw' }];
+            }
+            if (fn.startsWith('frontend_vue3cdn_standalone/')) {
+                return [{ text: '[FE]', cls: 'sg-fe' }, { text: '[vue3cdn]', cls: 'sg-fw' }];
+            }
+            if (fn.startsWith('frontend_vue3/')) {
+                return [{ text: '[FE]', cls: 'sg-fe' }, { text: '[vue3]', cls: 'sg-fw' }];
+            }
+            if (fn.startsWith('frontend_pyscript_cdn_standalone/')) {
+                return [{ text: '[FE]', cls: 'sg-fe' }, { text: '[pyscript]', cls: 'sg-fw' }];
+            }
+            if (fn.startsWith('frontend_flutter/')) {
+                return [{ text: '[FE]', cls: 'sg-fe' }, { text: '[flutter]', cls: 'sg-fw' }];
+            }
+            if (fn.startsWith('frontend_react_native/')) {
+                return [{ text: '[FE]', cls: 'sg-fe' }, { text: '[rn]', cls: 'sg-fw' }];
+            }
+            if (fn.startsWith('frontend_android/')) {
+                return [{ text: '[FE]', cls: 'sg-fe' }, { text: '[android]', cls: 'sg-fw' }];
+            }
+            if (fn.startsWith('frontend_ios/')) {
+                return [{ text: '[FE]', cls: 'sg-fe' }, { text: '[ios]', cls: 'sg-fw' }];
+            }
+            if (fn.startsWith('fullstack_nuxt/')) {
+                return [{ text: '[FULL]', cls: 'sg-be' }, { text: '[nuxt 4 + prisma]', cls: 'sg-fw' }];
+            }
+            if (fn.startsWith('fullstack_nextjs/')) {
+                return [{ text: '[FULL]', cls: 'sg-be' }, { text: '[nextjs 15 + prisma]', cls: 'sg-fw' }];
+            }
+            if (fn.startsWith('frontend_svelte_cdn_standalone/')) {
+                return [{ text: '[FE]', cls: 'sg-fe' }, { text: '[sveltecdn]', cls: 'sg-fw' }];
+            }
+            if (fn.startsWith('frontend_svelte/')) {
+                return [{ text: '[FE]', cls: 'sg-fe' }, { text: '[svelte]', cls: 'sg-fw' }];
+            }
+            if (fn.startsWith('frontend_react_cdn_standalone/')) {
+                return [{ text: '[FE]', cls: 'sg-fe' }, { text: '[reactcdn]', cls: 'sg-fw' }];
+            }
+            if (fn.startsWith('frontend_react/')) {
+                return [{ text: '[FE]', cls: 'sg-fe' }, { text: '[react]', cls: 'sg-fw' }];
+            }
+            if (fn.startsWith('backend_jpa/repository/')) {
+                return [{ text: '[BE]', cls: 'sg-be' }, { text: '[jpa]', cls: 'sg-jpa' }];
+            }
+            if (fn.startsWith('backend_jpa/')) {
+                return [{ text: '[BE]', cls: 'sg-be' }];
+            }
+            if (fn.startsWith('backend_mybatis/mapper/')) {
+                return [{ text: '[BE]', cls: 'sg-be' }, { text: '[mybatis]', cls: 'sg-jpa' }];
+            }
+            if (fn.startsWith('backend_mybatis/')) {
+                return [{ text: '[BE]', cls: 'sg-be' }];
+            }
+            if (fn.startsWith('backend_python/')) {
+                return [{ text: '[BE]', cls: 'sg-be' }, { text: '[py]', cls: 'sg-jpa' }];
+            }
+            if (fn.startsWith('backend_csharp_efcore/')) {
+                return [{ text: '[BE]', cls: 'sg-be' }, { text: '[c# efcore]', cls: 'sg-jpa' }];
+            }
+            if (fn.startsWith('backend_csharp_dapper/')) {
+                return [{ text: '[BE]', cls: 'sg-be' }, { text: '[c# dapper]', cls: 'sg-jpa' }];
+            }
+            if (fn.startsWith('backend_nestjs/')) {
+                return [{ text: '[BE]', cls: 'sg-be' }, { text: '[nestjs 10]', cls: 'sg-jpa' }];
+            }
+            if (fn.startsWith('backend_expressjs/')) {
+                return [{ text: '[BE]', cls: 'sg-be' }, { text: '[express 4]', cls: 'sg-jpa' }];
+            }
+            return [{ text: '[BE]', cls: 'sg-be' }];
+        }
+
+        function fmLangOf(fn) {
+            const n = fn.toLowerCase();
+            if (n.endsWith('.java'))                       return 'java';
+            if (n.endsWith('.xml'))                        return 'markup';
+            if (n.endsWith('.html') || n.endsWith('.vue')) return 'markup';
+            if (n.endsWith('.jsx'))                        return 'jsx';
+            if (n.endsWith('.js'))                         return 'javascript';
+            if (n.endsWith('.sql'))                        return 'sql';
+            if (n.endsWith('.py'))                         return 'python';
+            if (n.endsWith('.cs'))                         return 'csharp';
+            if (n.endsWith('.csproj'))                     return 'markup';
+            if (n.endsWith('.json'))                       return 'json';
+            if (n.endsWith('.dart'))                       return 'dart';
+            if (n.endsWith('.tsx') || n.endsWith('.ts'))   return 'jsx';
+            if (n.endsWith('.yaml') || n.endsWith('.yml')) return 'yaml';
+            if (n.endsWith('.kt') || n.endsWith('.kts'))   return 'kotlin';
+            if (n.endsWith('.swift'))                      return 'swift';
+            if (n.endsWith('.gradle'))                     return 'groovy';
+            return 'none';
+        }
+
+        const codeBox = ref(null);
+        // 활성 탭 또는 활성 파일 변경 시 Prism 재실행
+        watch([activeTabIdx, () => curTab.value.active,
+               () => Object.keys(curTab.value.files).join('|')], async () => {
+            await nextTick();
+            if (codeBox.value) {
+                Prism.highlightElement(codeBox.value.querySelector('code'));
+            }
+        });
+
+        /** 샘플 로드 — 현재 탭에 */
+        function handleLoadSample(key) {
+            curTab.value.ddl = SAMPLES[key] || '';
+            curTab.value.error = '';
+        }
+        /** 현재 탭만 비움 */
+        function handleClearTab() {
+            const t = curTab.value;
+            t.ddl = '';
+            utSetObj(t.files, {});
+            t.active = '';
+            t.error = '';
+            t.generatedAt = '';
+            // basePackage 는 1탭만 보존
+            t.opts.schema = ''; t.opts.table = ''; t.opts.className = '';
+            t.opts.endpoint = ''; t.opts.tag = '';
+        }
+        /** 모든 탭 초기화 */
+        function handleResetAll() {
+            tabs.forEach((t, i) => {
+                t.ddl = '';
+                utSetObj(t.files, {});
+                t.active = '';
+                t.error = '';
+                t.generatedAt = '';
+                t.opts.schema = ''; t.opts.table = ''; t.opts.className = '';
+                t.opts.endpoint = ''; t.opts.tag = '';
+                t.opts.basePackage = (i === 0) ? 'com.exam.app' : '';
+            });
+            activeTabIdx.value = 0;
+        }
+
+        /** [생성] — DDL 채워진 모든 탭 처리 */
+        function handleGenerate() {
+            const basePkg = tabs[0].opts.basePackage || 'com.exam.app';
+            let firstGenerated = -1;
+            tabs.forEach((t, i) => {
+                t.error = '';
+                if (!t.ddl || !t.ddl.trim()) {
+                    // DDL 비어있으면 결과 클리어
+                    utSetObj(t.files, {});
+                    t.active = '';
+                    t.generatedAt = '';
+                    return;
+                }
+                try {
+                    const meta = gnParseDdl(t.ddl, 'postgresql');
+                    const opts = { ...t.opts, basePackage: basePkg, rawDdl: t.ddl };
+                    const result = gnGenerate(meta, opts);
+                    utSetObj(t.files, result);
+                    const names = Object.keys(t.files);
+                    t.active = names[0] || '';
+                    t.generatedAt = fmNowStr();
+                    if (firstGenerated < 0) {
+                        firstGenerated = i;
+                    }
+                } catch (e) {
+                    t.error = e.message;
+                    utSetObj(t.files, {});
+                    t.active = '';
+                }
+            });
+            // 결과 보여주기 위해 첫 생성된 탭으로 이동
+            if (firstGenerated >= 0) {
+                activeTabIdx.value = firstGenerated;
+            }
+        }
+
+        function fmNowStr() {
+            const d = new Date();
+            const p = n => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ` +
+                   `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+        }
+        async function handleCopyCode() {
+            if (!curTab.value.active) {
+                return;
+            }
+            const code = curTab.value.files[curTab.value.active] || '';
+            try {
+                await navigator.clipboard.writeText(code);
+                copied.value = true;
+                setTimeout(() => copied.value = false, 1500);
+            } catch (e) {
+                const ta = document.createElement('textarea');
+                ta.value = code; document.body.appendChild(ta);
+                ta.select(); document.execCommand('copy');
+                document.body.removeChild(ta);
+                copied.value = true;
+                setTimeout(() => copied.value = false, 1500);
+            }
+        }
+
+        function handleDownloadFile() {
+            if (!curTab.value.active) {
+                return;
+            }
+            const code = curTab.value.files[curTab.value.active] || '';
+            const fileName = curTab.value.active.split('/').pop();
+            const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = fileName;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // 미리보기 — sourcegen_ui_preview.js 의 fnPreviewFile 에 현재 탭 files 전달
+        const handlePreviewFile = (fn) => fnPreviewFile(fn, curTab.value.files);
+
+        /** 파일맵 키(fn) → ZIP 안에서의 실제 경로
+         *  - 각 출력물을 모듈명 폴더(sourcegen_xxx_yyy/) 아래로 한 단계 더 감쌈
+         *  - DDL 은 ZIP 루트(ddl/) 그대로 (모든 모듈 공용 메타) */
+        function bdZipPath(fn, pkgPath) {
+            // === DDL — 루트 ===
+            if (fn.startsWith('ddl/')) {
+                return fn;
+            }
+
+            // === Backend ===
+            if (fn.startsWith('backend_jpa/')) {
+                return `sourcegen_be_jpa/src_jpa/main/java/${pkgPath}/` + fn.substring('backend_jpa/'.length);
+            }
+            if (fn.startsWith('backend_mybatis/mapper/') && fn.endsWith('.xml')) {
+                return `sourcegen_be_mybatis/src_mybatis/main/resources/mapper/` + fn.substring('backend_mybatis/mapper/'.length);
+            }
+            if (fn.startsWith('backend_mybatis/')) {
+                return `sourcegen_be_mybatis/src_mybatis/main/java/${pkgPath}/` + fn.substring('backend_mybatis/'.length);
+            }
+            if (fn.startsWith('backend_python/')) {
+                return `sourcegen_be_python/src_python/` + fn.substring('backend_python/'.length);
+            }
+            if (fn.startsWith('backend_csharp_efcore/')) {
+                return `sourcegen_be_csharp_efcore/src_csharp_efcore/` + fn.substring('backend_csharp_efcore/'.length);
+            }
+            if (fn.startsWith('backend_csharp_dapper/')) {
+                return `sourcegen_be_csharp_dapper/src_csharp_dapper/` + fn.substring('backend_csharp_dapper/'.length);
+            }
+            if (fn.startsWith('backend_nestjs/')) {
+                return `sourcegen_be_nestjs10/src_nestjs/` + fn.substring('backend_nestjs/'.length);
+            }
+            if (fn.startsWith('backend_expressjs/')) {
+                return `sourcegen_be_expressjs4/src_expressjs/` + fn.substring('backend_expressjs/'.length);
+            }
+
+            // === Frontend — Vue3 (CDN 2종은 같은 모듈 폴더) ===
+            if (fn.startsWith('frontend_vue3cdn_with_common/')) {
+                return 'sourcegen_fe_vue3_cdn/with-common/' + fn.substring('frontend_vue3cdn_with_common/'.length);
+            }
+            if (fn.startsWith('frontend_vue3cdn_standalone/')) {
+                return 'sourcegen_fe_vue3_cdn/standalone/' + fn.substring('frontend_vue3cdn_standalone/'.length);
+            }
+            if (fn.startsWith('frontend_vue3/')) {
+                return 'sourcegen_fe_vue3/frontend-vue3/src/views/' + fn.substring('frontend_vue3/'.length);
+            }
+
+            // === Frontend — React ===
+            if (fn.startsWith('frontend_react_cdn_standalone/')) {
+                return 'sourcegen_fe_react_cdn/' + fn.substring('frontend_react_cdn_standalone/'.length);
+            }
+            if (fn.startsWith('frontend_react/')) {
+                return 'sourcegen_fe_react/frontend-react/src/pages/' + fn.substring('frontend_react/'.length);
+            }
+
+            // === Frontend — Svelte ===
+            if (fn.startsWith('frontend_svelte_cdn_standalone/')) {
+                return 'sourcegen_fe_svelte_cdn/' + fn.substring('frontend_svelte_cdn_standalone/'.length);
+            }
+            if (fn.startsWith('frontend_svelte/')) {
+                return 'sourcegen_fe_svelte/frontend-svelte/' + fn.substring('frontend_svelte/'.length);
+            }
+
+            // === Frontend — PyScript / Flutter / React Native ===
+            if (fn.startsWith('frontend_pyscript_cdn_standalone/')) {
+                return 'sourcegen_fe_pyscript_cdn/' + fn.substring('frontend_pyscript_cdn_standalone/'.length);
+            }
+            if (fn.startsWith('frontend_flutter/')) {
+                return 'sourcegen_fe_flutter/frontend-flutter/' + fn.substring('frontend_flutter/'.length);
+            }
+            if (fn.startsWith('frontend_react_native/')) {
+                return 'sourcegen_fe_react_native/frontend-react-native/' + fn.substring('frontend_react_native/'.length);
+            }
+            if (fn.startsWith('frontend_android/')) {
+                return 'sourcegen_fe_android_compose/frontend-android/' + fn.substring('frontend_android/'.length);
+            }
+            if (fn.startsWith('frontend_ios/')) {
+                return 'sourcegen_fe_ios_swiftui/frontend-ios/' + fn.substring('frontend_ios/'.length);
+            }
+
+            // === Fullstack ===
+            if (fn.startsWith('fullstack_nuxt/')) {
+                return 'sourcegen_full_nuxt4/fullstack-nuxt/' + fn.substring('fullstack_nuxt/'.length);
+            }
+            if (fn.startsWith('fullstack_nextjs/')) {
+                return 'sourcegen_full_nextjs15/fullstack-nextjs/' + fn.substring('fullstack_nextjs/'.length);
+            }
+
+            // fallback (분류 안 된 파일)
+            return `_misc/${fn}`;
+        }
+
+        /** 모든 탭의 파일을 ZIP 으로 묶어 다운로드
+         *  - JPA/MyBatis 충돌 시 mybatis → .mybatis.txt
+         *  - 미리보기 HTML 은 preview/tab<N>/ 아래에 별도 복제 (with-common 은 common.css/js inline)
+         *  - ZIP 루트에 index.html 생성 (좌측 메뉴 + iframe 미리보기)
+         *  - common.css / common.js 도 ZIP 루트에 포함 */
+        async function handleDownloadZip() {
+            const zip = new JSZip();
+            const pkgPath = (tabs[0].opts.basePackage || 'com.exam.app').replace(/\./g, '/');
+
+            // 1) 백엔드/프론트 소스 ZIP 경로 매핑 — mybatis 는 src_mybatis/ 로 분리되어 충돌 없음
+            tabs.forEach(t => {
+                Object.entries(t.files).forEach(([fn, content]) => {
+                    zip.file(bdZipPath(fn, pkgPath), content);
+                });
+            });
+
+            // 2) 미리보기 — common.css/js 가져오기 (with-common 인라인 치환 + ZIP 포함)
+            const { css: commonCss, js: commonJs } = await fnFetchCommon();
+            if (commonCss) zip.file('common.css', commonCss);
+            if (commonJs)  zip.file('common.js',  commonJs);
+
+            // 3) 각 탭의 미리보기 가능 HTML 을 preview/tab<N>/ 아래에 복제
+            const menuGroups = bdMenuItems(tabs);
+            menuGroups.forEach(g => {
+                const t = tabs[g.tabNo - 1];
+                g.items.forEach(it => {
+                    let html = t.files[it.fn] || '';
+                    if (it.fn.startsWith('frontend_vue3cdn_with_common/')) {
+                        html = html
+                            .replace(/<link\s+rel="stylesheet"\s+href="common\.css"\s*\/?>/i,
+                                     '<style>\n' + commonCss + '\n</style>')
+                            .replace(/<script\s+src="common\.js"\s*><\/script>/i,
+                                     '<script>\n' + commonJs + '\n<\/script>');
+                    }
+                    zip.file(`preview/tab${g.tabNo}/${it.fn}.html`, html);
+                });
+            });
+
+            // 4) 루트 index.html 생성
+            zip.file('index.html', bdIndexHtml(menuGroups, 'postgresql', tabs, bdZipPath, pkgPath));
+
+            const blob = await zip.generateAsync({ type: 'blob' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = bdZipName('postgresql');
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        /** ZIP 파일명: "generated-source yyyyMMdd_HHmmss <db> <ClassNames>.zip" */
+        function bdZipName(db) {
+            const d = new Date();
+            const p = n => String(n).padStart(2, '0');
+            const ts = `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+            // 모든 탭의 클래스명을 모음
+            const classes = [];
+            tabs.forEach(t => {
+                for (const fn of Object.keys(t.files)) {
+                    const m = fn.match(/^backend_jpa\/domain\/([A-Z]\w*)\.java$/);
+                    if (m) {
+                        classes.push(m[1]);
+                        break;
+                    }
+                }
+            });
+            const cls = classes.length ? ' ' + classes.join('+') : '';
+            return `generated-source ${ts} ${db}${cls}.zip`;
+        }
+
+        // 진입 시 1탭에 zz_exam1 자동 로드 + 생성
+        onMounted(() => {
+            handleLoadSample('exam1');
+            handleGenerate();
+        });
+
+        return {
+            tabs, activeTabIdx, curTab, curOpts, copied,
+            hasData, resultTabIndices, totalFileCount,
+            groupedFiles, fmShortName, fmLabelsOf, fmLangOf,
+            handleLoadSample, handleClearTab, handleResetAll, handleGenerate,
+            handleCopyCode, handleDownloadFile, handleDownloadZip,
+            canPreview: chCanPreview, previewFile: handlePreviewFile,
+            codeBox
+        };
+    }
+}).mount('#app');
+</script>
+</body>
+</html>

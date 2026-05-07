@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Exam2 CRUD (아코디언)</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .acc-toggle { cursor: pointer; user-select: none; width: 28px; text-align: center; color: #4f7df3; font-weight: bold; }
+        .acc-toggle:hover { background: #f0f4ff; }
+        .acc-child { background: #fafbfc; }
+        .acc-child td { padding: 0; border-bottom: 2px solid #ecf0f1; }
+        .acc-inner { padding: 14px 24px; }
+        .acc-inner h3 { font-size: 13px; color: #555; margin-bottom: 10px;
+            display: flex; justify-content: space-between; align-items: center; }
+        .acc-inner table { font-size: 12px; }
+        .acc-inner th { background: #7f8c8d; }
+        .acc-loading { padding: 16px; text-align: center; color: #95a5a6; }
+        .acc-empty-row { padding: 14px; text-align: center; color: #bdc3c7; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="container">
+        <h1>Exam2 (복합 PK 2 / exam1 LEFT JOIN, 아코디언)</h1>
+
+        <div class="card">
+            <h2>검색 조건</h2>
+            <div class="grid">
+                <div class="field" v-for="f in searchFields" :key="f.name">
+                    <label>{{f.label}}</label>
+                    <input v-model="search[f.name]" :placeholder="f.label">
+                </div>
+                <div class="field">
+                    <label>페이지크기</label>
+                    <select v-model.number="search.pageSize">
+                        <option :value="5">5</option>
+                        <option :value="10">10</option>
+                        <option :value="20">20</option>
+                        <option :value="50">50</option>
+                    </select>
+                </div>
+            </div>
+            <div class="toolbar-right" style="margin-top:12px;justify-content:flex-end;display:flex;">
+                <button class="btn btn-primary" @click="searchPage(1)">검색</button>
+                <button class="btn btn-secondary" @click="resetSearch">초기화</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>목록 (행 좌측 ▶ 클릭하여 자식 exam3 펼치기)</h2>
+            <div class="toolbar">
+                <span class="toolbar-left">총 {{page.pageTotalCount}}건 / {{page.pageTotalPages || 0}}페이지</span>
+                <div class="toolbar-right">
+                    <button class="btn btn-success" @click="openInsert">+ 신규등록</button>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:36px"></th>
+                        <th v-for="col in columns" :key="col.key"
+                            :class="['sortable', sortDir(col.key) ? 'sort-' + sortDir(col.key) : '']"
+                            @click="toggleSort(col.key)">
+                            {{col.label}}<span class="sort-arrow"></span>
+                        </th>
+                        <th style="width:130px">관리</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-if="!list.length">
+                        <td :colspan="columns.length + 2" class="empty">데이터 없음</td>
+                    </tr>
+                    <template v-for="row in list" :key="rowKey(row)">
+                        <tr>
+                            <td class="acc-toggle" @click="toggleAcc(row)">
+                                {{ acc[rowKey(row)]?.open ? '▼' : '▶' }}
+                            </td>
+                            <td v-for="col in columns" :key="col.key">
+                                <span>{{row[col.key]}}</span>
+                                <span v-if="col.parentNmKey && row[col.parentNmKey]" class="nm">
+                                    / {{row[col.parentNmKey]}}
+                                </span>
+                            </td>
+                            <td class="actions">
+                                <button class="btn btn-warning btn-sm" @click="openUpdate(row)">수정</button>
+                                <button class="btn btn-danger btn-sm" @click="deleteRow(row)">삭제</button>
+                            </td>
+                        </tr>
+                        <tr class="acc-child" v-if="acc[rowKey(row)]?.open">
+                            <td :colspan="columns.length + 2">
+                                <div class="acc-inner">
+                                    <h3>
+                                        <span>↳ 자식 exam3 (exam1Id={{row.exam1Id}}, exam2Id={{row.exam2Id}})</span>
+                                        <button class="btn btn-success btn-sm"
+                                                @click="openInsertChild(row)">+ exam3 등록</button>
+                                    </h3>
+                                    <div v-if="acc[rowKey(row)]?.loading" class="acc-loading">불러오는 중...</div>
+                                    <table v-else-if="acc[rowKey(row)]?.children?.length">
+                                        <thead>
+                                            <tr>
+                                                <th>exam3_id</th>
+                                                <th>exam3_nm</th>
+                                                <th>col31</th>
+                                                <th>col32</th>
+                                                <th>col33</th>
+                                                <th>col34</th>
+                                                <th>col35</th>
+                                                <th style="width:130px">관리</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="c in acc[rowKey(row)].children"
+                                                :key="c.exam1Id+'/'+c.exam2Id+'/'+c.exam3Id">
+                                                <td>{{c.exam3Id}}</td>
+                                                <td>{{c.exam3Nm}}</td>
+                                                <td>{{c.col31}}</td>
+                                                <td>{{c.col32}}</td>
+                                                <td>{{c.col33}}</td>
+                                                <td>{{c.col34}}</td>
+                                                <td>{{c.col35}}</td>
+                                                <td class="actions">
+                                                    <button class="btn btn-warning btn-sm" @click="openEditChild(c, row)">수정</button>
+                                                    <button class="btn btn-danger btn-sm" @click="deleteChild(c, row)">삭제</button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <div v-else class="acc-empty-row">자식 exam3 없음</div>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+
+            <div class="pagination" v-if="page.pageTotalPages > 0">
+                <button class="page-btn" :disabled="page.pageNo<=1" @click="searchPage(1)">«</button>
+                <button class="page-btn" :disabled="page.pageNo<=1" @click="searchPage(page.pageNo-1)">‹</button>
+                <button class="page-btn" v-for="p in pageRange" :key="p"
+                        :class="{active: p===page.pageNo}" @click="searchPage(p)">{{p}}</button>
+                <button class="page-btn" :disabled="page.pageNo>=page.pageTotalPages" @click="searchPage(page.pageNo+1)">›</button>
+                <button class="page-btn" :disabled="page.pageNo>=page.pageTotalPages" @click="searchPage(page.pageTotalPages)">»</button>
+            </div>
+        </div>
+
+        <!-- exam2 등록/수정 모달 -->
+        <div class="modal-overlay" v-if="modal.show" @click.self="modal.show=false">
+            <div class="modal">
+                <h3>{{modal.mode==='insert' ? '신규 등록' : '수정'}} - Exam2</h3>
+                <div class="field" v-for="f in formFields" :key="f.name">
+                    <label>{{f.label}}{{f.required ? ' *' : ''}}</label>
+                    <input v-model="modal.form[f.name]"
+                           :disabled="modal.mode==='update' && f.pk"
+                           :placeholder="f.required ? '필수' : ''">
+                </div>
+                <div class="modal-btns">
+                    <button class="btn btn-secondary" @click="modal.show=false">취소</button>
+                    <button class="btn btn-primary" @click="saveModal">저장</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- exam3 등록/수정 모달 -->
+        <div class="modal-overlay" v-if="childModal.show" @click.self="childModal.show=false">
+            <div class="modal">
+                <h3>{{childModal.mode==='insert' ? 'Exam3 신규 등록' : 'Exam3 수정'}}</h3>
+                <div class="field"><label>exam1_id *</label>
+                    <input v-model="childModal.form.exam1Id" :disabled="true"></div>
+                <div class="field"><label>exam2_id *</label>
+                    <input v-model="childModal.form.exam2Id" :disabled="true"></div>
+                <div class="field"><label>exam3_id *</label>
+                    <input v-model="childModal.form.exam3Id" :disabled="childModal.mode==='update'"></div>
+                <div class="field"><label>exam3_nm *</label>
+                    <input v-model="childModal.form.exam3Nm"></div>
+                <div class="field"><label>col31</label><input v-model="childModal.form.col31"></div>
+                <div class="field"><label>col32</label><input v-model="childModal.form.col32"></div>
+                <div class="field"><label>col33</label><input v-model="childModal.form.col33"></div>
+                <div class="field"><label>col34</label><input v-model="childModal.form.col34"></div>
+                <div class="field"><label>col35</label><input v-model="childModal.form.col35"></div>
+                <div class="modal-btns">
+                    <button class="btn btn-secondary" @click="childModal.show=false">취소</button>
+                    <button class="btn btn-primary" @click="saveChild">저장</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 디버그 -->
+        <div class="debug">
+            <div class="debug-header">
+                <h2>요청/응답 정보</h2>
+                <span class="debug-status"
+                      :class="debug.error ? 'err' : (debug.status ? 'ok' : '')">
+                    <template v-if="debug.status">{{debug.status}} ({{debug.durationMs}} ms)</template>
+                    <template v-else>대기 중</template>
+                </span>
+            </div>
+            <div class="debug-body">
+                <div class="debug-row">
+                    <div class="debug-label">요청 URL</div>
+                    <div class="debug-value">
+                        <span v-if="debug.method" class="debug-method" :class="debug.method">{{debug.method}}</span>
+                        <span v-if="debug.url">{{debug.url}}</span>
+                        <span v-else class="debug-empty">아직 요청 없음</span>
+                    </div>
+                </div>
+                <div class="debug-row">
+                    <div class="debug-label">파라미터</div>
+                    <div class="debug-value">
+                        <pre v-if="debug.params && Object.keys(debug.params).length">{{fmt(debug.params)}}</pre>
+                        <span v-else class="debug-empty">(없음)</span>
+                    </div>
+                </div>
+                <div class="debug-row">
+                    <div class="debug-label">요청 본문</div>
+                    <div class="debug-value">
+                        <pre v-if="debug.body">{{fmt(debug.body)}}</pre>
+                        <span v-else class="debug-empty">(없음)</span>
+                    </div>
+                </div>
+                <div class="debug-row">
+                    <div class="debug-label">응답 정보</div>
+                    <div class="debug-value">
+                        <pre v-if="debug.response !== null && debug.response !== undefined">{{fmt(debug.response)}}</pre>
+                        <span v-else class="debug-empty">(없음)</span>
+                    </div>
+                </div>
+                <div class="debug-row" v-if="debug.error">
+                    <div class="debug-label" style="color:#e74c3c;">오류</div>
+                    <div class="debug-value" style="color:#e74c3c;">{{debug.error}}</div>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="toast" class="toast" :class="toast.type==='ok' ? 'toast-ok' : 'toast-err'">{{toast.text}}</div>
+    </div>
+</div>
+
+<script>
+const { createApp, ref, reactive, computed, onMounted } = Vue;
+const API = 'http://localhost:8080/api';
+
+function setObj(target, src) {
+    Object.keys(target).forEach(k => delete target[k]);
+    if (src) Object.assign(target, src);
+}
+function setArr(target, src) {
+    target.length = 0;
+    if (src && src.length) target.push(...src);
+}
+
+createApp({
+    setup() {
+        const searchFields = [
+            { name: 'exam1Id', label: 'exam1_id' },
+            { name: 'exam1Nm', label: 'exam1_nm' },
+            { name: 'exam2Id', label: 'exam2_id' },
+            { name: 'exam2Nm', label: 'exam2_nm' },
+            { name: 'col21', label: 'col21' },
+            { name: 'col22', label: 'col22' },
+            { name: 'col23', label: 'col23' },
+            { name: 'col24', label: 'col24' },
+            { name: 'col25', label: 'col25' },
+        ];
+        const columns = [
+            { key: 'exam1Id', label: 'exam1', parentNmKey: 'exam1Nm' },
+            { key: 'exam2Id', label: 'exam2_id' },
+            { key: 'exam2Nm', label: 'exam2_nm' },
+            { key: 'col21', label: 'col21' },
+            { key: 'col22', label: 'col22' },
+            { key: 'col23', label: 'col23' },
+            { key: 'col24', label: 'col24' },
+            { key: 'col25', label: 'col25' },
+            { key: 'regId', label: '등록자' },
+            { key: 'regDt', label: '등록일시' },
+            { key: 'updId', label: '변경자' },
+            { key: 'updDt', label: '변경일시' },
+        ];
+        const formFields = [
+            { name: 'exam1Id', label: 'exam1_id', required: true, pk: true },
+            { name: 'exam2Id', label: 'exam2_id', required: true, pk: true },
+            { name: 'exam2Nm', label: 'exam2_nm', required: true },
+            { name: 'col21', label: 'col21' },
+            { name: 'col22', label: 'col22' },
+            { name: 'col23', label: 'col23' },
+            { name: 'col24', label: 'col24' },
+            { name: 'col25', label: 'col25' },
+        ];
+        const emptyForm = () => ({ exam1Id:'', exam2Id:'', exam2Nm:'',
+            col21:'', col22:'', col23:'', col24:'', col25:'' });
+        const emptySearch = () => ({ exam1Id:'', exam1Nm:'', exam2Id:'', exam2Nm:'',
+            col21:'', col22:'', col23:'', col24:'', col25:'',
+            pageNo:1, pageSize:10, sortBy:'' });
+
+        const search = reactive(emptySearch());
+        const list = reactive([]);
+        const page = reactive({ pageTotalCount: 0, pageNo: 1, pageSize: 10, pageTotalPages: 0 });
+        const modal = reactive({ show: false, mode: 'insert', form: {} });
+        const childModal = reactive({ show: false, mode: 'insert', form: {}, _parent: null });
+        const acc = reactive({});
+        const toast = ref(null);
+        const debug = reactive({ method:'', url:'', params:null, body:null,
+            status:null, response:null, durationMs:null, error:null });
+
+        function notify(type, text) {
+            toast.value = { type, text };
+            setTimeout(() => toast.value = null, 2500);
+        }
+        function rowKey(row) { return row.exam1Id + '|' + row.exam2Id; }
+
+        const pageRange = computed(() => {
+            const cur = page.pageNo;
+            const total = page.pageTotalPages || 1;
+            const block = Math.floor((cur - 1) / 5);
+            const start = block * 5 + 1;
+            const end = Math.min(start + 4, total);
+            const r = [];
+            for (let i = start; i <= end; i++) r.push(i);
+            return r;
+        });
+
+        async function call(method, url, params, body) {
+            setObj(debug, { method, url, params, body,
+                status:null, response:null, durationMs:null, error:null });
+            const start = performance.now();
+            const opts = { method };
+            if (body) {
+                opts.headers = { 'Content-Type': 'application/json' };
+                opts.body = JSON.stringify(body);
+            }
+            try {
+                const res = await fetch(url, opts);
+                debug.status = `${res.status} ${res.statusText}`;
+                debug.durationMs = Math.round(performance.now() - start);
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ error: res.statusText }));
+                    debug.response = err;
+                    debug.error = err.error || res.statusText;
+                    throw new Error(debug.error);
+                }
+                if (res.status === 204) { debug.response = '(no content)'; return null; }
+                const data = await res.json();
+                debug.response = data;
+                return data;
+            } catch (e) {
+                if (debug.durationMs == null) debug.durationMs = Math.round(performance.now() - start);
+                if (!debug.error) debug.error = e.message;
+                throw e;
+            }
+        }
+
+        async function searchPage(p = 1) {
+            search.pageNo = p;
+            try {
+                const params = {};
+                Object.entries(search).forEach(([k, v]) => {
+                    if (v !== '' && v != null) params[k] = v;
+                });
+                const qs = new URLSearchParams(params).toString();
+                const data = await call('GET', `${API}/exam2/page-list?${qs}`, params, null);
+                setArr(list, data.pageList || []);
+                setObj(page, { pageTotalCount: data.pageTotalCount, pageNo: data.pageNo,
+                    pageSize: data.pageSize, pageTotalPages: data.pageTotalPages });
+            } catch (e) { notify('err', e.message); }
+        }
+
+        function resetSearch() {
+            setObj(search, emptySearch());
+            searchPage(1);
+        }
+
+        function toggleSort(colKey) {
+            const cur = search.sortBy || '';
+            let next;
+            if (cur === colKey + ' asc') next = colKey + ' desc';
+            else if (cur === colKey + ' desc') next = '';
+            else next = colKey + ' asc';
+            search.sortBy = next;
+            searchPage(1);
+        }
+        function sortDir(colKey) {
+            const cur = search.sortBy || '';
+            if (cur === colKey + ' asc')  return 'asc';
+            if (cur === colKey + ' desc') return 'desc';
+            return '';
+        }
+
+        // === 아코디언 ===
+        async function toggleAcc(row) {
+            const k = rowKey(row);
+            if (!acc[k]) acc[k] = { open: false, loading: false, children: [] };
+            acc[k].open = !acc[k].open;
+            if (acc[k].open && !acc[k].children.length) {
+                await loadChildren(row);
+            }
+        }
+        async function loadChildren(row) {
+            const k = rowKey(row);
+            acc[k].loading = true;
+            try {
+                const params = { exam1Id: row.exam1Id, exam2Id: row.exam2Id };
+                const qs = new URLSearchParams(params).toString();
+                const data = await call('GET', `${API}/exam3/list?${qs}`, params, null);
+                acc[k].children = data;
+            } catch (e) { notify('err', e.message); }
+            acc[k].loading = false;
+        }
+
+        // === exam2 CRUD ===
+        function openInsert() {
+            setObj(modal, { show: true, mode: 'insert', form: emptyForm() });
+        }
+        function openUpdate(row) {
+            setObj(modal, { show: true, mode: 'update', form: { ...row } });
+        }
+        async function saveModal() {
+            try {
+                if (modal.mode === 'insert') {
+                    await call('POST', `${API}/exam2`, null, modal.form);
+                    notify('ok', '등록 완료');
+                } else {
+                    const f = modal.form;
+                    await call('PUT', `${API}/exam2/${f.exam1Id}/${f.exam2Id}`, null, f);
+                    notify('ok', '수정 완료');
+                }
+                modal.show = false;
+                await searchPage(page.pageNo);
+            } catch (e) { notify('err', e.message); }
+        }
+        async function deleteRow(row) {
+            if (!confirm(`삭제? [${row.exam1Id}/${row.exam2Id}]`)) return;
+            try {
+                await call('DELETE', `${API}/exam2/${row.exam1Id}/${row.exam2Id}`, null, null);
+                notify('ok', '삭제 완료');
+                await searchPage(page.pageNo);
+            } catch (e) { notify('err', e.message); }
+        }
+
+        // === exam3 자식 CRUD ===
+        function openInsertChild(parent) {
+            setObj(childModal, {
+                show: true, mode: 'insert',
+                form: { exam1Id: parent.exam1Id, exam2Id: parent.exam2Id,
+                    exam3Id:'', exam3Nm:'',
+                    col31:'', col32:'', col33:'', col34:'', col35:'' },
+                _parent: parent
+            });
+        }
+        function openEditChild(child, parent) {
+            setObj(childModal, { show: true, mode: 'update', form: { ...child }, _parent: parent });
+        }
+        async function saveChild() {
+            const f = childModal.form;
+            const parent = childModal._parent;
+            try {
+                if (childModal.mode === 'insert') {
+                    await call('POST', `${API}/exam3`, null, f);
+                    notify('ok', 'exam3 등록 완료');
+                } else {
+                    await call('PUT',
+                        `${API}/exam3/${f.exam1Id}/${f.exam2Id}/${f.exam3Id}`, null, f);
+                    notify('ok', 'exam3 수정 완료');
+                }
+                childModal.show = false;
+                await loadChildren(parent);
+            } catch (e) { notify('err', e.message); }
+        }
+        async function deleteChild(child, parent) {
+            if (!confirm(`exam3 삭제? [${child.exam1Id}/${child.exam2Id}/${child.exam3Id}]`)) return;
+            try {
+                await call('DELETE',
+                    `${API}/exam3/${child.exam1Id}/${child.exam2Id}/${child.exam3Id}`, null, null);
+                notify('ok', 'exam3 삭제 완료');
+                await loadChildren(parent);
+            } catch (e) { notify('err', e.message); }
+        }
+
+        function fmt(v) {
+            if (v === null || v === undefined) return '(없음)';
+            if (typeof v === 'string') return v;
+            try { return JSON.stringify(v, null, 2); } catch { return String(v); }
+        }
+
+        onMounted(() => searchPage(1));
+
+        return {
+            searchFields, columns, formFields,
+            search, list, page, modal, childModal, acc, toast, debug, pageRange,
+            rowKey, searchPage, resetSearch, toggleSort, sortDir,
+            toggleAcc,
+            openInsert, openUpdate, saveModal, deleteRow,
+            openInsertChild, openEditChild, saveChild, deleteChild,
+            fmt
+        };
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
