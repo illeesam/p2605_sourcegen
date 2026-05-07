@@ -1,11 +1,11 @@
 package com.exam.jap_exam123.repository.impl;
 
-import com.exam.jap_exam123.dto.QZzExam1Dto_Item;
 import com.exam.jap_exam123.dto.ZzExam1Dto;
 import com.exam.jap_exam123.domain.QZzExam1;
 import com.exam.jap_exam123.repository.ZzExam1RepositoryCustom;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.util.StringUtils;
@@ -24,7 +24,7 @@ public class ZzExam1RepositoryCustomImpl implements ZzExam1RepositoryCustom {
     @Override
     public Optional<ZzExam1Dto.Item> selectById(String exam1Id) {
         ZzExam1Dto.Item dto = queryFactory
-                .select(new QZzExam1Dto_Item(
+                .select(Projections.bean(ZzExam1Dto.Item.class,
                         exam1.exam1Id, exam1.exam1Nm,
                         exam1.col11, exam1.col12, exam1.col13, exam1.col14, exam1.col15,
                         exam1.regId, exam1.regDt, exam1.updId, exam1.updDt
@@ -40,7 +40,7 @@ public class ZzExam1RepositoryCustomImpl implements ZzExam1RepositoryCustom {
     public List<ZzExam1Dto.Item> selectList(ZzExam1Dto.Request search) {
         BooleanBuilder where = buildCondition(search);
         var query = queryFactory
-                .select(new QZzExam1Dto_Item(
+                .select(Projections.bean(ZzExam1Dto.Item.class,
                         exam1.exam1Id, exam1.exam1Nm,
                         exam1.col11, exam1.col12, exam1.col13, exam1.col14, exam1.col15,
                         exam1.regId, exam1.regDt, exam1.updId, exam1.updDt
@@ -67,7 +67,7 @@ public class ZzExam1RepositoryCustomImpl implements ZzExam1RepositoryCustom {
         BooleanBuilder where = buildCondition(search);
 
         List<ZzExam1Dto.Item> content = queryFactory
-                .select(new QZzExam1Dto_Item(
+                .select(Projections.bean(ZzExam1Dto.Item.class,
                         exam1.exam1Id, exam1.exam1Nm,
                         exam1.col11, exam1.col12, exam1.col13, exam1.col14, exam1.col15,
                         exam1.regId, exam1.regDt, exam1.updId, exam1.updDt

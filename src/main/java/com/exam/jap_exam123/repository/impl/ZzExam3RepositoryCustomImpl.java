@@ -1,12 +1,12 @@
 package com.exam.jap_exam123.repository.impl;
 
-import com.exam.jap_exam123.dto.QZzExam3Dto_Item;
 import com.exam.jap_exam123.dto.ZzExam3Dto;
 import com.exam.jap_exam123.domain.QZzExam1;
 import com.exam.jap_exam123.domain.QZzExam2;
 import com.exam.jap_exam123.domain.QZzExam3;
 import com.exam.jap_exam123.repository.ZzExam3RepositoryCustom;
 import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.util.StringUtils;
@@ -27,7 +27,7 @@ public class ZzExam3RepositoryCustomImpl implements ZzExam3RepositoryCustom {
     @Override
     public Optional<ZzExam3Dto.Item> selectById(String exam1Id, String exam2Id, String exam3Id) {
         ZzExam3Dto.Item dto = queryFactory
-                .select(new QZzExam3Dto_Item(
+                .select(Projections.bean(ZzExam3Dto.Item.class,
                         exam3.id.exam1Id, exam1.exam1Nm,
                         exam3.id.exam2Id, exam2.exam2Nm,
                         exam3.id.exam3Id, exam3.exam3Nm,
@@ -51,7 +51,7 @@ public class ZzExam3RepositoryCustomImpl implements ZzExam3RepositoryCustom {
     @Override
     public List<ZzExam3Dto.Item> selectList(ZzExam3Dto.Request s) {
         var query = queryFactory
-                .select(new QZzExam3Dto_Item(
+                .select(Projections.bean(ZzExam3Dto.Item.class,
                         exam3.id.exam1Id, exam1.exam1Nm,
                         exam3.id.exam2Id, exam2.exam2Nm,
                         exam3.id.exam3Id, exam3.exam3Nm,
@@ -93,7 +93,7 @@ public class ZzExam3RepositoryCustomImpl implements ZzExam3RepositoryCustom {
         int limit    = pageSize;
 
         List<ZzExam3Dto.Item> content = queryFactory
-                .select(new QZzExam3Dto_Item(
+                .select(Projections.bean(ZzExam3Dto.Item.class,
                         exam3.id.exam1Id, exam1.exam1Nm,
                         exam3.id.exam2Id, exam2.exam2Nm,
                         exam3.id.exam3Id, exam3.exam3Nm,

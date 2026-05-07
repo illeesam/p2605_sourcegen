@@ -306,12 +306,12 @@ function gnRepoCustomImplSource(pkg, className, varName, dataCols, pkCols, hasAu
 
     return `package ${pkg}.repository.impl;
 
-import ${pkg}.dto.Q${className}Dto_Item;
 import ${pkg}.dto.${className}Dto;
 import ${pkg}.domain.Q${className};
 import ${pkg}.repository.${className}RepositoryCustom;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.util.StringUtils;
@@ -330,7 +330,7 @@ public class ${className}RepositoryCustomImpl implements ${className}RepositoryC
     @Override
     public Optional<${className}Dto.Item> selectById(${args}) {
         ${className}Dto.Item dto = queryFactory
-                .select(new Q${className}Dto_Item(${qFields}))
+                .select(Projections.bean(${className}Dto.Item.class, ${qFields}))
                 .from(${varName})
                 .where(${whereSelectOne})
                 .fetchOne();
@@ -341,7 +341,7 @@ public class ${className}RepositoryCustomImpl implements ${className}RepositoryC
     @Override
     public List<${className}Dto.Item> selectList(${className}Dto.Request search) {
         var query = queryFactory
-                .select(new Q${className}Dto_Item(${qFields}))
+                .select(Projections.bean(${className}Dto.Item.class, ${qFields}))
                 .from(${varName})
                 .where(buildCondition(search))
                 .orderBy(buildOrder(search));
@@ -364,7 +364,7 @@ public class ${className}RepositoryCustomImpl implements ${className}RepositoryC
         BooleanBuilder where = buildCondition(search);
 
         List<${className}Dto.Item> content = queryFactory
-                .select(new Q${className}Dto_Item(${qFields}))
+                .select(Projections.bean(${className}Dto.Item.class, ${qFields}))
                 .from(${varName})
                 .where(where)
                 .orderBy(buildOrder(search))

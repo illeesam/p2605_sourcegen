@@ -1,12 +1,12 @@
 package com.exam.jap_exam123.repository.impl;
 
-import com.exam.jap_exam123.dto.QZzExam2Dto_Item;
 import com.exam.jap_exam123.dto.ZzExam2Dto;
 import com.exam.jap_exam123.domain.QZzExam1;
 import com.exam.jap_exam123.domain.QZzExam2;
 import com.exam.jap_exam123.repository.ZzExam2RepositoryCustom;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.util.StringUtils;
@@ -26,7 +26,7 @@ public class ZzExam2RepositoryCustomImpl implements ZzExam2RepositoryCustom {
     @Override
     public Optional<ZzExam2Dto.Item> selectById(String exam1Id, String exam2Id) {
         ZzExam2Dto.Item dto = queryFactory
-                .select(new QZzExam2Dto_Item(
+                .select(Projections.bean(ZzExam2Dto.Item.class,
                         exam2.id.exam1Id, exam1.exam1Nm,
                         exam2.id.exam2Id, exam2.exam2Nm,
                         exam2.col21, exam2.col22, exam2.col23, exam2.col24, exam2.col25,
@@ -44,7 +44,7 @@ public class ZzExam2RepositoryCustomImpl implements ZzExam2RepositoryCustom {
     public List<ZzExam2Dto.Item> selectList(ZzExam2Dto.Request search) {
         BooleanBuilder where = buildCondition(search);
         var query = queryFactory
-                .select(new QZzExam2Dto_Item(
+                .select(Projections.bean(ZzExam2Dto.Item.class,
                         exam2.id.exam1Id, exam1.exam1Nm,
                         exam2.id.exam2Id, exam2.exam2Nm,
                         exam2.col21, exam2.col22, exam2.col23, exam2.col24, exam2.col25,
@@ -73,7 +73,7 @@ public class ZzExam2RepositoryCustomImpl implements ZzExam2RepositoryCustom {
         BooleanBuilder where = buildCondition(search);
 
         List<ZzExam2Dto.Item> content = queryFactory
-                .select(new QZzExam2Dto_Item(
+                .select(Projections.bean(ZzExam2Dto.Item.class,
                         exam2.id.exam1Id, exam1.exam1Nm,
                         exam2.id.exam2Id, exam2.exam2Nm,
                         exam2.col21, exam2.col22, exam2.col23, exam2.col24, exam2.col25,
