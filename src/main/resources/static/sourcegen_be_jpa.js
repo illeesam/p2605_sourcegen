@@ -279,7 +279,8 @@ function gnRepoCustomImplSource(pkg, className, varName, dataCols, pkCols, hasAu
     const qFields = allItemCols.map(c => {
         if (isComposite && c.isPk) return `${varName}.id.${c.javaName}`;
         return `${varName}.${c.javaName}`;
-    }).join(', ');
+    }).join(`
+                        , `);
 
     const args = pkCols.map(c => `${c.javaType} ${c.javaName}`).join(', ');
     const whereSelectOne = pkCols.map(c => {
@@ -334,7 +335,9 @@ public class ${className}RepositoryCustomImpl implements ${className}RepositoryC
     @Override
     public Optional<${className}Dto.Item> selectById(${args}) {
         ${className}Dto.Item dto = queryFactory
-                .select(Projections.bean(${className}Dto.Item.class, ${qFields}))
+                .select(Projections.bean(${className}Dto.Item.class,
+                        ${qFields}
+                ))
                 .from(${varName})
                 .where(${whereSelectOne})
                 .fetchOne();
@@ -392,7 +395,9 @@ public class ${className}RepositoryCustomImpl implements ${className}RepositoryC
     /** 기본 쿼리 빌드 */
     private JPAQuery<${className}Dto.Item> buildBaseQuery() {
         return queryFactory
-                .select(Projections.bean(${className}Dto.Item.class, ${qFields}))
+                .select(Projections.bean(${className}Dto.Item.class,
+                        ${qFields}
+                ))
                 .from(${varName});
     }
 
