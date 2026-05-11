@@ -310,12 +310,16 @@ import ${pkg}.dto.${className}Dto;
 import ${pkg}.domain.Q${className};
 import ${pkg}.repository.${className}RepositoryCustom;
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.PathBuilder;
 import com.querydsl.core.types.Projections;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -340,11 +344,13 @@ public class ${className}RepositoryCustomImpl implements ${className}RepositoryC
     /** 전체 목록 (pageNo/pageSize 가 양수면 페이징 적용) */
     @Override
     public List<${className}Dto.Item> selectList(${className}Dto.Request search) {
-        var query = queryFactory
-                .select(Projections.bean(${className}Dto.Item.class, ${qFields}))
-                .from(${varName})
-                .where(buildCondition(search))
-                .orderBy(buildOrder(search));
+        BooleanBuilder where = buildCondition(search);
+        List<OrderSpecifier<?>> orderList = buildOrder(search);
+        var query = buildBaseQuery()
+                .where(where);
+        if (!orderList.isEmpty()) {
+            query.orderBy(orderList.toArray(OrderSpecifier[]::new));
+        }
         if (search.getPageSize() > 0 && search.getPageNo() > 0) {
             int offset = (search.getPageNo() - 1) * search.getPageSize();
             int limit  = search.getPageSize();
@@ -362,13 +368,14 @@ public class ${className}RepositoryCustomImpl implements ${className}RepositoryC
         int limit    = pageSize;
 
         BooleanBuilder where = buildCondition(search);
+        List<OrderSpecifier<?>> orderList = buildOrder(search);
 
-        List<${className}Dto.Item> content = queryFactory
-                .select(Projections.bean(${className}Dto.Item.class, ${qFields}))
-                .from(${varName})
-                .where(where)
-                .orderBy(buildOrder(search))
-                .offset(offset)
+        var query = buildBaseQuery()
+                .where(where);
+        if (!orderList.isEmpty()) {
+            query = query.orderBy(orderList.toArray(OrderSpecifier[]::new));
+        }
+        List<${className}Dto.Item> content = query.offset(offset)
                 .limit(limit)
                 .fetch();
 
@@ -382,6 +389,13 @@ public class ${className}RepositoryCustomImpl implements ${className}RepositoryC
                 ${className}Dto.Response.toCond(search));
     }
 
+    /** 기본 쿼리 빌드 */
+    private JPAQuery<${className}Dto.Item> buildBaseQuery() {
+        return queryFactory
+                .select(Projections.bean(${className}Dto.Item.class, ${qFields}))
+                .from(${varName});
+    }
+
     /** 검색조건 빌드 */
     private BooleanBuilder buildCondition(${className}Dto.Request s) {
         BooleanBuilder b = new BooleanBuilder();
@@ -389,13 +403,26 @@ ${conditions}
         return b;
     }
 
-    /** 정렬조건 빌드 */
-    private OrderSpecifier<?> buildOrder(${className}Dto.Request s) {
-        if (!StringUtils.hasText(s.getSortBy())) return null;
-        switch (s.getSortBy().trim()) {
-${orderCases}
-            default: return ${orderBy};
+    /** 정렬조건 빌드
+     * 예제: "exam1Id asc", "exam1Nm desc, col11 asc"
+     * 형식: "필드명 방향" (asc/desc), 여러 개는 콤마로 구분
+     */
+    private List<OrderSpecifier<?>> buildOrder(${className}Dto.Request s) {
+        if (!StringUtils.hasText(s.getSortBy())) return new ArrayList<>();
+        PathBuilder<${className}> entityPath = new PathBuilder<>(${className}.class, "${varName}");
+        String[] sortParts = s.getSortBy().split(",");
+        List<OrderSpecifier<?>> orders = new ArrayList<>();
+        for (String part : sortParts) {
+            String trimmed = part.trim();
+            String[] fieldAndDir = trimmed.split(" ");
+            if (fieldAndDir.length == 2) {
+                String field = fieldAndDir[0];
+                String dir = fieldAndDir[1];
+                Order order = "desc".equalsIgnoreCase(dir) ? Order.DESC : Order.ASC;
+                orders.add(new OrderSpecifier(order, entityPath.get(field)));
+            }
         }
+        return orders;
     }
 }
 `;

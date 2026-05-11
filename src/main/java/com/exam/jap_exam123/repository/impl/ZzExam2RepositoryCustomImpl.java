@@ -1,16 +1,20 @@
 package com.exam.jap_exam123.repository.impl;
 
+import com.exam.jap_exam123.domain.ZzExam2;
 import com.exam.jap_exam123.dto.ZzExam2Dto;
 import com.exam.jap_exam123.domain.QZzExam1;
 import com.exam.jap_exam123.domain.QZzExam2;
 import com.exam.jap_exam123.repository.ZzExam2RepositoryCustom;
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.PathBuilder;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,10 +31,19 @@ public class ZzExam2RepositoryCustomImpl implements ZzExam2RepositoryCustom {
     public Optional<ZzExam2Dto.Item> selectById(String exam1Id, String exam2Id) {
         ZzExam2Dto.Item dto = queryFactory
                 .select(Projections.bean(ZzExam2Dto.Item.class,
-                        exam2.id.exam1Id, exam1.exam1Nm,
-                        exam2.id.exam2Id, exam2.exam2Nm,
-                        exam2.col21, exam2.col22, exam2.col23, exam2.col24, exam2.col25,
-                        exam2.regId, exam2.regDt, exam2.updId, exam2.updDt
+                        exam2.id.exam1Id
+                        , exam1.exam1Nm
+                        , exam2.id.exam2Id
+                        , exam2.exam2Nm
+                        , exam2.col21
+                        , exam2.col22
+                        , exam2.col23
+                        , exam2.col24
+                        , exam2.col25
+                        , exam2.regId
+                        , exam2.regDt
+                        , exam2.updId
+                        , exam2.updDt
                 ))
                 .from(exam2)
                 .leftJoin(exam1).on(exam1.exam1Id.eq(exam2.id.exam1Id))
@@ -43,17 +56,12 @@ public class ZzExam2RepositoryCustomImpl implements ZzExam2RepositoryCustom {
     @Override
     public List<ZzExam2Dto.Item> selectList(ZzExam2Dto.Request search) {
         BooleanBuilder where = buildCondition(search);
-        var query = queryFactory
-                .select(Projections.bean(ZzExam2Dto.Item.class,
-                        exam2.id.exam1Id, exam1.exam1Nm,
-                        exam2.id.exam2Id, exam2.exam2Nm,
-                        exam2.col21, exam2.col22, exam2.col23, exam2.col24, exam2.col25,
-                        exam2.regId, exam2.regDt, exam2.updId, exam2.updDt
-                ))
-                .from(exam2)
-                .leftJoin(exam1).on(exam1.exam1Id.eq(exam2.id.exam1Id))
-                .where(where)
-                .orderBy(buildOrder(search));
+        List<OrderSpecifier<?>> orderList = buildOrder(search);
+        var query = buildBaseQuery()
+                .where(where);
+        if (!orderList.isEmpty()) {
+            query.orderBy(orderList.toArray(OrderSpecifier[]::new));
+        }
         if (search.getPageSize() > 0 && search.getPageNo() > 0) {
             int offset = (search.getPageNo() - 1) * search.getPageSize();
             int limit  = search.getPageSize();
@@ -71,19 +79,14 @@ public class ZzExam2RepositoryCustomImpl implements ZzExam2RepositoryCustom {
         int limit    = pageSize;
 
         BooleanBuilder where = buildCondition(search);
+        List<OrderSpecifier<?>> orderList = buildOrder(search);
 
-        List<ZzExam2Dto.Item> content = queryFactory
-                .select(Projections.bean(ZzExam2Dto.Item.class,
-                        exam2.id.exam1Id, exam1.exam1Nm,
-                        exam2.id.exam2Id, exam2.exam2Nm,
-                        exam2.col21, exam2.col22, exam2.col23, exam2.col24, exam2.col25,
-                        exam2.regId, exam2.regDt, exam2.updId, exam2.updDt
-                ))
-                .from(exam2)
-                .leftJoin(exam1).on(exam1.exam1Id.eq(exam2.id.exam1Id))
-                .where(where)
-                .orderBy(buildOrder(search))
-                .offset(offset)
+        var query = buildBaseQuery()
+                .where(where);
+        if (!orderList.isEmpty()) {
+            query = query.orderBy(orderList.toArray(OrderSpecifier[]::new));
+        }
+        List<ZzExam2Dto.Item> content = query.offset(offset)
                 .limit(limit)
                 .fetch();
 
@@ -112,29 +115,48 @@ public class ZzExam2RepositoryCustomImpl implements ZzExam2RepositoryCustom {
         return b;
     }
 
-    /** 정렬조건 빌드 */
-    private OrderSpecifier<?> buildOrder(ZzExam2Dto.Request s) {
-        if (!StringUtils.hasText(s.getSortBy())) return null;
-        switch (s.getSortBy().trim()) {
-            case "exam1Id asc":  return exam2.id.exam1Id.asc();
-            case "exam1Id desc": return exam2.id.exam1Id.desc();
-            case "exam1Nm asc":  return exam1.exam1Nm.asc();
-            case "exam1Nm desc": return exam1.exam1Nm.desc();
-            case "exam2Id asc":  return exam2.id.exam2Id.asc();
-            case "exam2Id desc": return exam2.id.exam2Id.desc();
-            case "exam2Nm asc":  return exam2.exam2Nm.asc();
-            case "exam2Nm desc": return exam2.exam2Nm.desc();
-            case "col21 asc":    return exam2.col21.asc();
-            case "col21 desc":   return exam2.col21.desc();
-            case "col22 asc":    return exam2.col22.asc();
-            case "col22 desc":   return exam2.col22.desc();
-            case "col23 asc":    return exam2.col23.asc();
-            case "col23 desc":   return exam2.col23.desc();
-            case "col24 asc":    return exam2.col24.asc();
-            case "col24 desc":   return exam2.col24.desc();
-            case "col25 asc":    return exam2.col25.asc();
-            case "col25 desc":   return exam2.col25.desc();
-            default:             return null;
+    /** 기본 쿼리 빌드 */
+    private JPAQuery<ZzExam2Dto.Item> buildBaseQuery() {
+        return queryFactory
+                .select(Projections.bean(ZzExam2Dto.Item.class,
+                        exam2.id.exam1Id
+                        , exam1.exam1Nm
+                        , exam2.id.exam2Id
+                        , exam2.exam2Nm
+                        , exam2.col21
+                        , exam2.col22
+                        , exam2.col23
+                        , exam2.col24
+                        , exam2.col25
+                        , exam2.regId
+                        , exam2.regDt
+                        , exam2.updId
+                        , exam2.updDt
+                ))
+                .from(exam2)
+                .leftJoin(exam1).on(exam1.exam1Id.eq(exam2.id.exam1Id))
+                .comment("ZzExam2 기본 조회 쿼리");
+    }
+
+    /** 정렬조건 빌드
+     * 예제: "exam1Id asc", "exam1Nm desc, col21 asc"
+     * 형식: "필드명 방향" (asc/desc), 여러 개는 콤마로 구분
+     */
+    private List<OrderSpecifier<?>> buildOrder(ZzExam2Dto.Request s) {
+        if (!StringUtils.hasText(s.getSortBy())) return new ArrayList<>();
+        PathBuilder<ZzExam2> entityPath = new PathBuilder<>(ZzExam2.class, "zzExam2");
+        String[] sortParts = s.getSortBy().split(",");
+        List<OrderSpecifier<?>> orders = new ArrayList<>();
+        for (String part : sortParts) {
+            String trimmed = part.trim();
+            String[] fieldAndDir = trimmed.split(" ");
+            if (fieldAndDir.length == 2) {
+                String field = fieldAndDir[0];
+                String dir = fieldAndDir[1];
+                Order order = "desc".equalsIgnoreCase(dir) ? Order.DESC : Order.ASC;
+                orders.add(new OrderSpecifier(order, entityPath.get(field)));
+            }
         }
+        return orders;
     }
 }

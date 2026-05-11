@@ -1,15 +1,20 @@
 package com.exam.jap_exam123.repository.impl;
 
+import com.exam.jap_exam123.domain.ZzExam1;
 import com.exam.jap_exam123.dto.ZzExam1Dto;
 import com.exam.jap_exam123.domain.QZzExam1;
 import com.exam.jap_exam123.repository.ZzExam1RepositoryCustom;
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.PathBuilder;
 import com.querydsl.core.types.Projections;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,14 +25,41 @@ public class ZzExam1RepositoryCustomImpl implements ZzExam1RepositoryCustom {
     private final JPAQueryFactory queryFactory;
     private static final QZzExam1 exam1 = QZzExam1.zzExam1;
 
+    /** 기본 쿼리 빌드 */
+    private JPAQuery<ZzExam1Dto.Item> buildBaseQuery() {
+        return queryFactory
+                .select(Projections.bean(ZzExam1Dto.Item.class,
+                        exam1.exam1Id
+                        , exam1.exam1Nm
+                        , exam1.col11
+                        , exam1.col12
+                        , exam1.col13
+                        , exam1.col14
+                        , exam1.col15
+                        , exam1.regId
+                        , exam1.regDt
+                        , exam1.updId
+                        , exam1.updDt
+                ))
+                .from(exam1);
+    }
+
     /** 단건 조회 */
     @Override
     public Optional<ZzExam1Dto.Item> selectById(String exam1Id) {
         ZzExam1Dto.Item dto = queryFactory
                 .select(Projections.bean(ZzExam1Dto.Item.class,
-                        exam1.exam1Id, exam1.exam1Nm,
-                        exam1.col11, exam1.col12, exam1.col13, exam1.col14, exam1.col15,
-                        exam1.regId, exam1.regDt, exam1.updId, exam1.updDt
+                        exam1.exam1Id
+                        , exam1.exam1Nm
+                        , exam1.col11
+                        , exam1.col12
+                        , exam1.col13
+                        , exam1.col14
+                        , exam1.col15
+                        , exam1.regId
+                        , exam1.regDt
+                        , exam1.updId
+                        , exam1.updDt
                 ))
                 .from(exam1)
                 .where(exam1.exam1Id.eq(exam1Id))
@@ -39,15 +71,12 @@ public class ZzExam1RepositoryCustomImpl implements ZzExam1RepositoryCustom {
     @Override
     public List<ZzExam1Dto.Item> selectList(ZzExam1Dto.Request search) {
         BooleanBuilder where = buildCondition(search);
-        var query = queryFactory
-                .select(Projections.bean(ZzExam1Dto.Item.class,
-                        exam1.exam1Id, exam1.exam1Nm,
-                        exam1.col11, exam1.col12, exam1.col13, exam1.col14, exam1.col15,
-                        exam1.regId, exam1.regDt, exam1.updId, exam1.updDt
-                ))
-                .from(exam1)
-                .where(where)
-                .orderBy(buildOrder(search));
+        List<OrderSpecifier<?>> orderList = buildOrder(search);
+        var query = buildBaseQuery()
+                .where(where);
+        if (!orderList.isEmpty()) {
+            query.orderBy(orderList.toArray(OrderSpecifier[]::new));
+        }
         if (search.getPageSize() > 0 && search.getPageNo() > 0) {
             int offset = (search.getPageNo() - 1) * search.getPageSize();
             int limit  = search.getPageSize();
@@ -65,17 +94,14 @@ public class ZzExam1RepositoryCustomImpl implements ZzExam1RepositoryCustom {
         int limit    = pageSize;
 
         BooleanBuilder where = buildCondition(search);
+        List<OrderSpecifier<?>> orderList = buildOrder(search);
 
-        List<ZzExam1Dto.Item> content = queryFactory
-                .select(Projections.bean(ZzExam1Dto.Item.class,
-                        exam1.exam1Id, exam1.exam1Nm,
-                        exam1.col11, exam1.col12, exam1.col13, exam1.col14, exam1.col15,
-                        exam1.regId, exam1.regDt, exam1.updId, exam1.updDt
-                ))
-                .from(exam1)
-                .where(where)
-                .orderBy(buildOrder(search))
-                .offset(offset)
+        var query = buildBaseQuery()
+                .where(where);
+        if (!orderList.isEmpty()) {
+            query = query.orderBy(orderList.toArray(OrderSpecifier[]::new));
+        }
+        List<ZzExam1Dto.Item> content = query.offset(offset)
                 .limit(limit)
                 .fetch();
 
@@ -101,25 +127,25 @@ public class ZzExam1RepositoryCustomImpl implements ZzExam1RepositoryCustom {
         return b;
     }
 
-    /** 정렬조건 빌드 */
-    private OrderSpecifier<?> buildOrder(ZzExam1Dto.Request s) {
-        if (!StringUtils.hasText(s.getSortBy())) return null;
-        switch (s.getSortBy().trim()) {
-            case "exam1Id asc":  return exam1.exam1Id.asc();
-            case "exam1Id desc": return exam1.exam1Id.desc();
-            case "exam1Nm asc":  return exam1.exam1Nm.asc();
-            case "exam1Nm desc": return exam1.exam1Nm.desc();
-            case "col11 asc":    return exam1.col11.asc();
-            case "col11 desc":   return exam1.col11.desc();
-            case "col12 asc":    return exam1.col12.asc();
-            case "col12 desc":   return exam1.col12.desc();
-            case "col13 asc":    return exam1.col13.asc();
-            case "col13 desc":   return exam1.col13.desc();
-            case "col14 asc":    return exam1.col14.asc();
-            case "col14 desc":   return exam1.col14.desc();
-            case "col15 asc":    return exam1.col15.asc();
-            case "col15 desc":   return exam1.col15.desc();
-            default:             return null;
+    /** 정렬조건 빌드
+     * 예제: "exam1Id asc", "exam1Nm desc, col11 asc"
+     * 형식: "필드명 방향" (asc/desc), 여러 개는 콤마로 구분
+     */
+    private List<OrderSpecifier<?>> buildOrder(ZzExam1Dto.Request s) {
+        if (!StringUtils.hasText(s.getSortBy())) return new ArrayList<>();
+        PathBuilder<ZzExam1> entityPath = new PathBuilder<>(ZzExam1.class, "zzExam1");
+        String[] sortParts = s.getSortBy().split(",");
+        List<OrderSpecifier<?>> orders = new ArrayList<>();
+        for (String part : sortParts) {
+            String trimmed = part.trim();
+            String[] fieldAndDir = trimmed.split(" ");
+            if (fieldAndDir.length == 2) {
+                String field = fieldAndDir[0];
+                String dir = fieldAndDir[1];
+                Order order = "desc".equalsIgnoreCase(dir) ? Order.DESC : Order.ASC;
+                orders.add(new OrderSpecifier(order, entityPath.get(field)));
+            }
         }
+        return orders;
     }
 }
