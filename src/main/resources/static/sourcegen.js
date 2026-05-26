@@ -104,8 +104,8 @@ function gnGenerate(meta, opts) {
 
     // Repository
     files[`backend_jpa/repository/${className}Repository.java`] = gnRepoSource(pkg, className, pkCols);
-    files[`backend_jpa/repository/${className}RepositoryCustom.java`] = gnRepoCustomSource(pkg, className, pkCols);
-    files[`backend_jpa/repository/impl/${className}RepositoryCustomImpl.java`] =
+    files[`backend_jpa/repository/qrydsl/Q${className}Repository.java`] = gnRepoCustomSource(pkg, className, pkCols);
+    files[`backend_jpa/repository/qrydsl/impl/Q${className}RepositoryImpl.java`] =
         gnRepoCustomImplSource(pkg, className, varName, dataCols, pkCols, hasAudit);
 
     // Service

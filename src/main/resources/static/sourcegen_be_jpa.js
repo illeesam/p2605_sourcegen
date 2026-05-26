@@ -1,5 +1,5 @@
 /* ===== Source Generator : Backend (JPA) =====
- * Entity / Dto / Repository / RepositoryCustom / RepositoryCustomImpl / Service / Controller
+ * Entity / Dto / Repository / QRepository / QRepositoryImpl / Service / Controller
  * 의존: fmCap(), gnAuditFields() (sourcegen.js)
  */
 
@@ -171,6 +171,10 @@ ${reqFields}
         // 정렬: "컬럼 asc" / "컬럼 desc"
         private String sortBy;
 
+        // 통합검색: searchValue 가 있으면 LIKE OR 검색, searchType 은 콤마구분 csv (비어있으면 전체 String 필드)
+        private String searchType;
+        private String searchValue;
+
         /** 행 상태: "I"=insert, "U"=update, "D"=delete (saveOne/saveList 용) */
         private String rowStatus;
 
@@ -243,17 +247,18 @@ function gnRepoSource(pkg, className, pkCols) {
     return `package ${pkg}.repository;
 
 import ${pkg}.domain.${className};
+import ${pkg}.repository.qrydsl.Q${className}Repository;
 ${idImport}import org.springframework.data.jpa.repository.JpaRepository;
 
 /** ${className} 리포지토리 */
-public interface ${className}Repository extends JpaRepository<${className}, ${idType}>, ${className}RepositoryCustom {
+public interface ${className}Repository extends JpaRepository<${className}, ${idType}>, Q${className}Repository {
 }
 `;
 }
 
 function gnRepoCustomSource(pkg, className, pkCols) {
     const args = pkCols.map(c => `${c.javaType} ${c.javaName}`).join(', ');
-    return `package ${pkg}.repository;
+    return `package ${pkg}.repository.qrydsl;
 
 import ${pkg}.dto.${className}Dto;
 
@@ -261,7 +266,7 @@ import java.util.List;
 import java.util.Optional;
 
 /** ${className} QueryDSL Custom */
-public interface ${className}RepositoryCustom {
+public interface Q${className}Repository {
     /** 단건 조회 */
     Optional<${className}Dto.Item> selectById(${args});
     /** 전체 목록 */
@@ -295,6 +300,23 @@ function gnRepoCustomImplSource(pkg, className, varName, dataCols, pkCols, hasAu
         return `        if (StringUtils.hasText(s.get${fmCap(c.javaName)}())) b.and(${path}.containsIgnoreCase(s.get${fmCap(c.javaName)}()));`;
     }).join('\n');
 
+    // searchValue LIKE OR — searchType csv 분기 (없으면 전체 String 필드)
+    const orLikeLines = searchCols.map(c => {
+        const path = isComposite && c.isPk ? `${varName}.id.${c.javaName}` : `${varName}.${c.javaName}`;
+        return `            if (__all || __types.contains(",${c.javaName},")) or.or(${path}.likeIgnoreCase(pattern));`;
+    }).join('\n');
+    const searchValueBlock = searchCols.length === 0 ? '' : `
+        /* searchValue LIKE OR — searchType csv 분기 (없으면 전체 String 필드) */
+        if (StringUtils.hasText(s.getSearchValue())) {
+            String pattern = "%" + s.getSearchValue() + "%";
+            String __typeRaw = s.getSearchType();
+            boolean __all = !StringUtils.hasText(__typeRaw);
+            String __types = __all ? "" : ("," + __typeRaw.trim() + ",");
+            BooleanBuilder or = new BooleanBuilder();
+${orLikeLines}
+            if (or.getValue() != null) b.and(or);
+        }`;
+
     // 정렬 case
     const orderCases = dataCols.map(c => {
         const path = isComposite && c.isPk ? `${varName}.id.${c.javaName}` : `${varName}.${c.javaName}`;
@@ -305,11 +327,11 @@ function gnRepoCustomImplSource(pkg, className, varName, dataCols, pkCols, hasAu
         ? pkCols.map(c => `${varName}.id.${c.javaName}.asc()`).join(', ')
         : `${varName}.${pkCols[0].javaName}.asc()`;
 
-    return `package ${pkg}.repository.impl;
+    return `package ${pkg}.repository.qrydsl.impl;
 
 import ${pkg}.dto.${className}Dto;
 import ${pkg}.domain.Q${className};
-import ${pkg}.repository.${className}RepositoryCustom;
+import ${pkg}.repository.qrydsl.Q${className}Repository;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
@@ -326,7 +348,7 @@ import java.util.Optional;
 
 /** ${className} QueryDSL Custom 구현체 */
 @RequiredArgsConstructor
-public class ${className}RepositoryCustomImpl implements ${className}RepositoryCustom {
+public class Q${className}RepositoryImpl implements Q${className}Repository {
 
     private final JPAQueryFactory queryFactory;
     private static final Q${className} ${varName} = Q${className}.${varName};
@@ -404,7 +426,7 @@ public class ${className}RepositoryCustomImpl implements ${className}RepositoryC
     /** 검색조건 빌드 */
     private BooleanBuilder buildCondition(${className}Dto.Request s) {
         BooleanBuilder b = new BooleanBuilder();
-${conditions}
+${conditions}${searchValueBlock}
         return b;
     }
 

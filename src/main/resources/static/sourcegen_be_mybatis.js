@@ -53,6 +53,10 @@ ${reqFields}
         // 정렬: "컬럼 asc" / "컬럼 desc"
         private String sortBy;
 
+        // 통합검색: searchValue 가 있으면 LIKE OR 검색, searchType 은 콤마구분 csv (비어있으면 전체 String 필드)
+        private String searchType;
+        private String searchValue;
+
         /** 행 상태: "I"=insert, "U"=update, "D"=delete (saveOne/saveList 용) */
         private String rowStatus;
 
@@ -167,6 +171,22 @@ function gnMybatisMapperXmlSource(pkg, className, table, dataCols, pkCols, nonPk
         `        </if>`
     ).join('\n');
 
+    // searchValue LIKE OR — searchType csv 분기 (없으면 전체 String 필드)
+    const orLikeIfs = stringDataCols.map(c =>
+        `                <if test="__all or __types.contains(',${c.javaName},')">\n` +
+        `                    OR UPPER(${TA}.${c.name}) LIKE '%' || UPPER(#{searchValue}) || '%'\n` +
+        `                </if>`
+    ).join('\n');
+    const searchValueBlock = stringDataCols.length === 0 ? '' : `
+        <if test="searchValue != null and searchValue != ''">
+            <bind name="__all" value="searchType == null or searchType == ''"/>
+            <bind name="__types" value="__all ? '' : ',' + searchType.trim() + ','"/>
+            AND (
+                1 = 0
+${orLikeIfs}
+            )
+        </if>`;
+
     // 정렬 - SELECT 문 안에서만 쓰이므로 alias prefix 적용
     const sortChoose = dataCols.filter(c => !c.isAudit).map(c =>
         `            <when test="sortBy == '${c.javaName} asc'">${TA}.${c.name} ASC</when>\n` +
@@ -201,7 +221,7 @@ ${resultMaps}
 
     <!-- 검색조건 sql 조각 (LIKE - 대소문자 무시) — SELECT 전용, alias '${TA}' 사용 -->
     <sql id="conditions">
-${condIfs}
+${condIfs}${searchValueBlock}
     </sql>
 
     <!-- 정렬 sql 조각 — SELECT 전용, alias '${TA}' 사용 -->

@@ -1,9 +1,9 @@
-package com.exam.jap_exam123.repository.impl;
+package com.exam.jap_exam123.repository.qrydsl.impl;
 
 import com.exam.jap_exam123.domain.ZzExam1;
 import com.exam.jap_exam123.dto.ZzExam1Dto;
 import com.exam.jap_exam123.domain.QZzExam1;
-import com.exam.jap_exam123.repository.ZzExam1RepositoryCustom;
+import com.exam.jap_exam123.repository.qrydsl.QZzExam1Repository;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
@@ -20,7 +20,7 @@ import java.util.Optional;
 
 /** zz_exam1 QueryDSL Custom 구현체 */
 @RequiredArgsConstructor
-public class ZzExam1RepositoryCustomImpl implements ZzExam1RepositoryCustom {
+public class QZzExam1RepositoryImpl implements QZzExam1Repository {
 
     private final JPAQueryFactory queryFactory;
     private static final QZzExam1 exam1 = QZzExam1.zzExam1;
