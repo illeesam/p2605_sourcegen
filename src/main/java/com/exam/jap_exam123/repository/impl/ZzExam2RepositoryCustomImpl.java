@@ -140,8 +140,8 @@ public class ZzExam2RepositoryCustomImpl implements ZzExam2RepositoryCustom {
     }
 
     /* =============================================================
-     * 검색조건 — 개별 andXxx() BooleanExpression 반환 메서드 모음
-     * null 반환은 BooleanBuilder.and(...) 가 자동 무시
+     * 검색조건 — 개별 baseAndXxx() BooleanExpression 반환 메서드 모음
+     * 각 쿼리의 .where(baseAndXxx(s), ...) 에 직접 나열 — null 반환은 자동 무시
      * ============================================================= */
 
     /* exam1Id 정확 일치 (PK - 복합 id 경유) */
