@@ -110,18 +110,20 @@ public class QZzExam1RepositoryImpl implements QZzExam1Repository {
 
         List<OrderSpecifier<?>> orderList = buildOrder(search);
 
-        var query = buildBaseQuery()
-                .where(
-                        baseAndExam1Id(search),
-                        baseAndExam1Nm(search),
-                        baseAndCol11(search),
-                        baseAndCol12(search),
-                        baseAndCol13(search),
-                        baseAndCol14(search),
-                        baseAndCol15(search),
-                        baseAndDateRange(search),
-                        baseAndSearchValue(search)
-                );
+        // 목록/카운트 공통 검색조건 (null 요소는 .where 가 자동 무시)
+        BooleanExpression[] conds = {
+                baseAndExam1Id(search),
+                baseAndExam1Nm(search),
+                baseAndCol11(search),
+                baseAndCol12(search),
+                baseAndCol13(search),
+                baseAndCol14(search),
+                baseAndCol15(search),
+                baseAndDateRange(search),
+                baseAndSearchValue(search)
+        };
+
+        var query = buildBaseQuery().where(conds);
         if (!orderList.isEmpty()) {
             query = query.orderBy(orderList.toArray(OrderSpecifier[]::new));
         }
@@ -132,17 +134,7 @@ public class QZzExam1RepositoryImpl implements QZzExam1Repository {
         Long total = queryFactory
                 .select(exam1.count())
                 .from(exam1)
-                .where(
-                        baseAndExam1Id(search),
-                        baseAndExam1Nm(search),
-                        baseAndCol11(search),
-                        baseAndCol12(search),
-                        baseAndCol13(search),
-                        baseAndCol14(search),
-                        baseAndCol15(search),
-                        baseAndDateRange(search),
-                        baseAndSearchValue(search)
-                )
+                .where(conds)
                 .fetchOne();
 
         return ZzExam1Dto.Response.of(content, total == null ? 0L : total, pageNo, pageSize);

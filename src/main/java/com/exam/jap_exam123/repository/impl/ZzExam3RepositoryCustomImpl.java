@@ -108,22 +108,24 @@ public class ZzExam3RepositoryCustomImpl implements ZzExam3RepositoryCustom {
 
         List<OrderSpecifier<?>> orderList = buildOrder(s);
 
-        var query = buildBaseQuery()
-                .where(
-                        baseAndExam1Id(s),
-                        baseAndExam1Nm(s),
-                        baseAndExam2Id(s),
-                        baseAndExam2Nm(s),
-                        baseAndExam3Id(s),
-                        baseAndExam3Nm(s),
-                        baseAndCol31(s),
-                        baseAndCol32(s),
-                        baseAndCol33(s),
-                        baseAndCol34(s),
-                        baseAndCol35(s),
-                        baseAndDateRange(s),
-                        baseAndSearchValue(s)
-                );
+        // 목록/카운트 공통 검색조건 (null 요소는 .where 가 자동 무시)
+        BooleanExpression[] conds = {
+                baseAndExam1Id(s),
+                baseAndExam1Nm(s),
+                baseAndExam2Id(s),
+                baseAndExam2Nm(s),
+                baseAndExam3Id(s),
+                baseAndExam3Nm(s),
+                baseAndCol31(s),
+                baseAndCol32(s),
+                baseAndCol33(s),
+                baseAndCol34(s),
+                baseAndCol35(s),
+                baseAndDateRange(s),
+                baseAndSearchValue(s)
+        };
+
+        var query = buildBaseQuery().where(conds);
         if (!orderList.isEmpty()) {
             query = query.orderBy(orderList.toArray(OrderSpecifier[]::new));
         }
@@ -137,21 +139,7 @@ public class ZzExam3RepositoryCustomImpl implements ZzExam3RepositoryCustom {
                 .leftJoin(exam1).on(exam1.exam1Id.eq(exam3.id.exam1Id))
                 .leftJoin(exam2).on(exam2.id.exam1Id.eq(exam3.id.exam1Id)
                         .and(exam2.id.exam2Id.eq(exam3.id.exam2Id)))
-                .where(
-                        baseAndExam1Id(s),
-                        baseAndExam1Nm(s),
-                        baseAndExam2Id(s),
-                        baseAndExam2Nm(s),
-                        baseAndExam3Id(s),
-                        baseAndExam3Nm(s),
-                        baseAndCol31(s),
-                        baseAndCol32(s),
-                        baseAndCol33(s),
-                        baseAndCol34(s),
-                        baseAndCol35(s),
-                        baseAndDateRange(s),
-                        baseAndSearchValue(s)
-                )
+                .where(conds)
                 .fetchOne();
 
         return ZzExam3Dto.Response.of(content, total == null ? 0L : total, pageNo, pageSize);

@@ -96,20 +96,22 @@ public class ZzExam2RepositoryCustomImpl implements ZzExam2RepositoryCustom {
 
         List<OrderSpecifier<?>> orderList = buildOrder(search);
 
-        var query = buildBaseQuery()
-                .where(
-                        baseAndExam1Id(search),
-                        baseAndExam1Nm(search),
-                        baseAndExam2Id(search),
-                        baseAndExam2Nm(search),
-                        baseAndCol21(search),
-                        baseAndCol22(search),
-                        baseAndCol23(search),
-                        baseAndCol24(search),
-                        baseAndCol25(search),
-                        baseAndDateRange(search),
-                        baseAndSearchValue(search)
-                );
+        // 목록/카운트 공통 검색조건 (null 요소는 .where 가 자동 무시)
+        BooleanExpression[] conds = {
+                baseAndExam1Id(search),
+                baseAndExam1Nm(search),
+                baseAndExam2Id(search),
+                baseAndExam2Nm(search),
+                baseAndCol21(search),
+                baseAndCol22(search),
+                baseAndCol23(search),
+                baseAndCol24(search),
+                baseAndCol25(search),
+                baseAndDateRange(search),
+                baseAndSearchValue(search)
+        };
+
+        var query = buildBaseQuery().where(conds);
         if (!orderList.isEmpty()) {
             query = query.orderBy(orderList.toArray(OrderSpecifier[]::new));
         }
@@ -121,19 +123,7 @@ public class ZzExam2RepositoryCustomImpl implements ZzExam2RepositoryCustom {
                 .select(exam2.count())
                 .from(exam2)
                 .leftJoin(exam1).on(exam1.exam1Id.eq(exam2.id.exam1Id))
-                .where(
-                        baseAndExam1Id(search),
-                        baseAndExam1Nm(search),
-                        baseAndExam2Id(search),
-                        baseAndExam2Nm(search),
-                        baseAndCol21(search),
-                        baseAndCol22(search),
-                        baseAndCol23(search),
-                        baseAndCol24(search),
-                        baseAndCol25(search),
-                        baseAndDateRange(search),
-                        baseAndSearchValue(search)
-                )
+                .where(conds)
                 .fetchOne();
 
         return ZzExam2Dto.Response.of(content, total == null ? 0L : total, pageNo, pageSize);
