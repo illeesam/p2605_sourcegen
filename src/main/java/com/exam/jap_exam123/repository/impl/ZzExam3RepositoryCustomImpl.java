@@ -82,7 +82,7 @@ public class ZzExam3RepositoryCustomImpl implements ZzExam3RepositoryCustom {
 
     /** 페이지 목록 (pageNo/pageSize 미지정 시 1페이지/10건 기본) */
     @Override
-    public ZzExam3Dto.Response selectPageList(ZzExam3Dto.Request s) {
+    public ZzExam3Dto.Response selectPageData(ZzExam3Dto.Request s) {
         int pageNo   = s.getPageNo()   > 0 ? s.getPageNo()   : 1;
         int pageSize = s.getPageSize() > 0 ? s.getPageSize() : 10;
         int offset   = (pageNo - 1) * pageSize;

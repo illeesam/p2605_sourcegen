@@ -372,7 +372,7 @@ export class ${className}Service {
   }
 
   /** 페이지 목록 */
-  async selectPageList(req: ${className}RequestDto): Promise<${className}ResponseDto> {
+  async selectPageData(req: ${className}RequestDto): Promise<${className}ResponseDto> {
     const pageNo   = (req.pageNo   ?? 0) > 0 ? req.pageNo!   : 1;
     const pageSize = (req.pageSize ?? 0) > 0 ? req.pageSize! : 10;
 
@@ -496,7 +496,7 @@ export class ${className}Controller {
   /** 페이지 목록 */
   @Get('page-list')
   pageList(@Query() req: ${className}RequestDto): Promise<${className}ResponseDto> {
-    return this.service.selectPageList(req);
+    return this.service.selectPageData(req);
   }
 
   /** 전체 목록 */

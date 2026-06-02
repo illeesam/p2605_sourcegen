@@ -114,6 +114,9 @@ function gnGenerate(meta, opts) {
     // Controller (경로: /api/${endpoint})
     files[`backend_jpa/controller/${className}Controller.java`] = gnControllerSource(pkg, className, endpoint, pkCols);
 
+    // 공통 유틸 (테이블 무관 - 매 탭 동일 내용, 마지막 값으로 덮어써도 무방)
+    files[`backend_jpa/util/VoUtil.java`] = gnVoUtilSource(pkg);
+
     // ===================== Backend (MyBatis) =====================
     // Dto (jpa 와 동일 구조 — 독립적으로 사용 가능하도록 풀세트)
     files[`backend_mybatis/dto/${className}Dto.java`] =
@@ -359,7 +362,7 @@ export const selectOne   = (row) => api(BASE + idPath(row));
 /** 전체 목록 */
 export const selectList  = (search) => api(\`\${BASE}/list?\${buildQs(search)}\`);
 /** 페이지 목록 */
-export const selectPageList  = (search) => api(\`\${BASE}/page-list?\${buildQs(search)}\`);
+export const selectPageData  = (search) => api(\`\${BASE}/page-list?\${buildQs(search)}\`);
 /** 등록 */
 export const create     = (form) => api(BASE, { method: 'POST', body: JSON.stringify(form) });
 /** 수정 (전체 교체) */

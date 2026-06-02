@@ -38,10 +38,10 @@ public class ZzExam3Controller {
     @Operation(summary = "페이지 목록",
             description = "검색조건 + 페이징 + 정렬, 조부모(exam1Nm)/부모(exam2Nm) 검색 가능")
     @GetMapping("/page-list")
-    public ResponseEntity<ZzExam3Dto.Response> selectPageList(
+    public ResponseEntity<ZzExam3Dto.Response> selectPageData(
             @Parameter(description = "검색조건 / page / size / sortBy(예: exam3Nm asc)")
             @ModelAttribute ZzExam3Dto.Request search) {
-        return ResponseEntity.ok(service.selectPageList(search));
+        return ResponseEntity.ok(service.selectPageData(search));
     }
 
     /** 전체 목록 */

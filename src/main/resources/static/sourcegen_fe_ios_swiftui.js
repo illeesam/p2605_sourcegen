@@ -151,7 +151,7 @@ struct ${className}Api {
     }
 
     // === REST 엔드포인트 ===
-    static func selectPageList(_ params: [String: Any]) async throws -> ${className}PageResponse {
+    static func selectPageData(_ params: [String: Any]) async throws -> ${className}PageResponse {
         let qs = buildQs(params)
         let url = URL(string: "\\(baseURL)/page-list?\\(qs)")!
         return try await request(url)
@@ -394,7 +394,7 @@ ${formInputs}
         var params: [String: Any] = ["pageNo": p, "pageSize": pageSize]
 ${searchToParams}
         do {
-            let res = try await ${className}Api.selectPageList(params)
+            let res = try await ${className}Api.selectPageData(params)
             list = res.pageList
             pageNo = res.pageNo
             pageSize = res.pageSize

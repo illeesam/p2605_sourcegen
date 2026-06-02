@@ -148,7 +148,7 @@ com.exam.jap_exam123
 ### Repository
 - `JpaRepository` + Custom 인터페이스 + CustomImpl 분리
 - `@EnableJpaRepositories(repositoryImplementationPostfix = "CustomImpl")`
-- QueryDSL: `selectById` / `selectList` / `selectPageList`
+- QueryDSL: `selectById` / `selectList` / `selectPageData`
 - 정렬: `sortBy = "컬럼 asc/desc"` 단일 파라미터, switch 분기, 빈값/매칭없음 = ORDER BY 미적용
 - 검색: `containsIgnoreCase` (ID), `like("%x%")` (이름)
 

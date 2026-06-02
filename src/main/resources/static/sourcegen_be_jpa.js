@@ -1,7 +1,53 @@
 /* ===== Source Generator : Backend (JPA) =====
- * Entity / Dto / Repository / QRepository / QRepositoryImpl / Service / Controller
+ * Entity / Dto / Repository / QRepository / QRepositoryImpl / Service / Controller / VoUtil
  * 의존: fmCap(), gnAuditFields() (sourcegen.js)
  */
+
+// ----- VoUtil (테이블 무관 공통 유틸 - Spring BeanUtils 기반 필드 복사) -----
+function gnVoUtilSource(pkg) {
+    return `package ${pkg}.util;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.BeanWrapper;
+import org.springframework.beans.BeanWrapperImpl;
+
+import java.beans.PropertyDescriptor;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * VO/DTO/Entity 간 동일 이름 필드 복사 유틸 (Spring BeanUtils 기반)
+ *  - voCopy(src, dst)           : 모든 필드 복사 (src 의 null 도 그대로 덮어씀)
+ *  - voCopyIgnoreNull(src, dst) : src 의 null 필드는 건너뛰고 복사 (부분 수정용)
+ */
+public final class VoUtil {
+
+    private VoUtil() {}
+
+    /** 동일 이름 프로퍼티를 src → dst 로 전체 복사 */
+    public static void voCopy(Object src, Object dst) {
+        BeanUtils.copyProperties(src, dst);
+    }
+
+    /** 동일 이름 프로퍼티를 src → dst 로 복사하되, src 값이 null 인 필드는 건너뜀 */
+    public static void voCopyIgnoreNull(Object src, Object dst) {
+        BeanUtils.copyProperties(src, dst, nullPropertyNames(src));
+    }
+
+    /** src 에서 값이 null 인 프로퍼티 이름 목록 (ignore 대상) */
+    private static String[] nullPropertyNames(Object src) {
+        BeanWrapper bw = new BeanWrapperImpl(src);
+        List<String> nulls = new ArrayList<>();
+        for (PropertyDescriptor pd : bw.getPropertyDescriptors()) {
+            if (bw.getPropertyValue(pd.getName()) == null) {
+                nulls.add(pd.getName());
+            }
+        }
+        return nulls.toArray(new String[0]);
+    }
+}
+`;
+}
 
 // ----- Entity (단일 PK) / Embedded Id -----
 function gnEntityIdSource(pkg, className, pkCols) {
@@ -175,6 +221,11 @@ ${reqFields}
         private String searchType;
         private String searchValue;
 
+        // 기간검색: dateType(reg_date|upd_date) + dateStart + dateEnd (yyyy-MM-dd, 끝일 포함)
+        private String dateType;
+        private String dateStart;
+        private String dateEnd;
+
         /** 행 상태: "I"=insert, "U"=update, "D"=delete (saveOne/saveList 용) */
         private String rowStatus;
 
@@ -260,6 +311,7 @@ function gnRepoCustomSource(pkg, className, pkCols) {
     const args = pkCols.map(c => `${c.javaType} ${c.javaName}`).join(', ');
     return `package ${pkg}.repository.qrydsl;
 
+import ${pkg}.domain.${className};
 import ${pkg}.dto.${className}Dto;
 
 import java.util.List;
@@ -272,7 +324,9 @@ public interface Q${className}Repository {
     /** 전체 목록 */
     List<${className}Dto.Item> selectList(${className}Dto.Request search);
     /** 페이지 목록 */
-    ${className}Dto.Response selectPageList(${className}Dto.Request search);
+    ${className}Dto.Response selectPageData(${className}Dto.Request search);
+    /** 동적 부분 수정 (null 이 아닌 필드만 set, updDt 는 DB CURRENT_TIMESTAMP 강제) */
+    int updateSelective(${className} entity);
 }
 `;
 }
@@ -295,27 +349,83 @@ function gnRepoCustomImplSource(pkg, className, varName, dataCols, pkCols, hasAu
 
     // 검색 조건 (PK 외 String 컬럼만)
     const searchCols = dataCols.filter(c => c.javaType === 'String' && !c.isAudit);
-    const conditions = searchCols.map(c => {
+    // 개별 조건 대상: PK 는 정확일치(eq), 그 외 String 컬럼은 LIKE
+    const condCols = dataCols.filter(c => (c.isPk || c.javaType === 'String') && !c.isAudit);
+
+    // buildCondition 본문: 개별 baseAndXxx() 누적 (null 은 BooleanBuilder.and 가 자동 무시)
+    const conditionCalls = condCols
+        .map(c => `        b.and(baseAnd${fmCap(c.javaName)}(s));`)
+        .join('\n');
+    const dateRangeCall = hasAudit ? '\n        b.and(baseAndDateRange(s));' : '';
+    const searchValueCall = searchCols.length === 0 ? '' : '\n        b.and(baseAndSearchValue(s));';
+
+    // 개별 baseAndXxx() BooleanExpression 메서드 (PK=eq, 그 외=LIKE)
+    const condMethods = condCols.map(c => {
         const path = isComposite && c.isPk ? `${varName}.id.${c.javaName}` : `${varName}.${c.javaName}`;
-        return `        if (StringUtils.hasText(s.get${fmCap(c.javaName)}())) b.and(${path}.containsIgnoreCase(s.get${fmCap(c.javaName)}()));`;
-    }).join('\n');
+        const getter = `s.get${fmCap(c.javaName)}()`;
+        const expr = c.isPk ? `${path}.eq(${getter})` : `${path}.containsIgnoreCase(${getter})`;
+        const note = c.isPk ? '정확 일치' : 'LIKE';
+        return `    /* ${c.javaName} ${note} */
+    private BooleanExpression baseAnd${fmCap(c.javaName)}(${className}Dto.Request s) {
+        return s != null && StringUtils.hasText(${getter})
+                ? ${expr} : null;
+    }`;
+    }).join('\n\n');
+
+    // 기간검색: dateType + dateStart + dateEnd (yyyy-MM-dd, 끝일 포함) — Audit 컬럼 있을 때만
+    const dateRangeMethod = !hasAudit ? '' : `
+
+    /* 기간 — dateType + dateStart + dateEnd (yyyy-MM-dd, 끝일 포함) */
+    private BooleanExpression baseAndDateRange(${className}Dto.Request s) {
+        if (s == null
+                || !StringUtils.hasText(s.getDateType())
+                || !StringUtils.hasText(s.getDateStart())
+                || !StringUtils.hasText(s.getDateEnd())) return null;
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        LocalDateTime start   = LocalDate.parse(s.getDateStart(), fmt).atStartOfDay();
+        LocalDateTime endExcl = LocalDate.parse(s.getDateEnd(),   fmt).plusDays(1).atStartOfDay();
+        switch (s.getDateType()) {
+            case "reg_date": return ${varName}.regDt.goe(start).and(${varName}.regDt.lt(endExcl));
+            case "upd_date": return ${varName}.updDt.goe(start).and(${varName}.updDt.lt(endExcl));
+            default: return null;
+        }
+    }`;
 
     // searchValue LIKE OR — searchType csv 분기 (없으면 전체 String 필드)
     const orLikeLines = searchCols.map(c => {
         const path = isComposite && c.isPk ? `${varName}.id.${c.javaName}` : `${varName}.${c.javaName}`;
-        return `            if (__all || __types.contains(",${c.javaName},")) or.or(${path}.likeIgnoreCase(pattern));`;
+        return `        or = orLike(or, all, types, ",${c.javaName},", ${path}, pattern);`;
     }).join('\n');
-    const searchValueBlock = searchCols.length === 0 ? '' : `
-        /* searchValue LIKE OR — searchType csv 분기 (없으면 전체 String 필드) */
-        if (StringUtils.hasText(s.getSearchValue())) {
-            String pattern = "%" + s.getSearchValue() + "%";
-            String __typeRaw = s.getSearchType();
-            boolean __all = !StringUtils.hasText(__typeRaw);
-            String __types = __all ? "" : ("," + __typeRaw.trim() + ",");
-            BooleanBuilder or = new BooleanBuilder();
+    const searchValueMethod = searchCols.length === 0 ? '' : `
+
+    /* searchValue LIKE OR — searchType csv 분기 (없으면 전체 String 필드) */
+    private BooleanExpression baseAndSearchValue(${className}Dto.Request s) {
+        if (s == null || !StringUtils.hasText(s.getSearchValue())) return null;
+        String pattern = "%" + s.getSearchValue() + "%";
+        String typeRaw = s.getSearchType();
+        boolean all = !StringUtils.hasText(typeRaw);
+        String types = all ? "" : ("," + typeRaw.trim() + ",");
+        BooleanExpression or = null;
 ${orLikeLines}
-            if (or.getValue() != null) b.and(or);
-        }`;
+        return or;
+    }
+
+    /* 단일 필드 LIKE 조건을 누적 OR (해당 type 이 포함됐을 때만) */
+    private BooleanExpression orLike(BooleanExpression acc, boolean all, String types,
+                                     String token, StringPath path, String pattern) {
+        if (!(all || types.contains(token))) return acc;
+        BooleanExpression expr = path.likeIgnoreCase(pattern);
+        return acc == null ? expr : acc.or(expr);
+    }`;
+
+    // buildCondition 아래 붙일 전체 헬퍼 메서드 블록
+    const condHelperBlock = `
+    /* =============================================================
+     * 검색조건 — 개별 andXxx() BooleanExpression 반환 메서드 모음
+     * null 반환은 BooleanBuilder.and(...) 가 자동 무시
+     * ============================================================= */
+
+${condMethods}${dateRangeMethod}${searchValueMethod}`;
 
     // 정렬 case
     const orderCases = dataCols.map(c => {
@@ -327,8 +437,32 @@ ${orLikeLines}
         ? pkCols.map(c => `${varName}.id.${c.javaName}.asc()`).join(', ')
         : `${varName}.${pkCols[0].javaName}.asc()`;
 
+    // updateSelective: null 이 아닌 PK 외 데이터 컬럼만 set (updDt 는 DB CURRENT_TIMESTAMP 강제)
+    const updCols = dataCols.filter(c => !c.isPk && !c.isAudit);
+    const updSetLines = updCols.map(c => {
+        const getter = `entity.get${fmCap(c.javaName)}()`;
+        return `        if (${getter} != null) { update.set(${varName}.${c.javaName}, ${getter}); hasAny = true; }`;
+    }).join('\n');
+    const updIdLine = hasAudit
+        ? `\n        if (entity.getUpdId() != null) { update.set(${varName}.updId, entity.getUpdId()); hasAny = true; }`
+        : '';
+    const updDtLine = hasAudit
+        ? `\n        /* updDt 는 entity 값 무시하고 DB CURRENT_TIMESTAMP 강제 적용 */\n        update.set(${varName}.updDt, Expressions.dateTimeTemplate(LocalDateTime.class, "CURRENT_TIMESTAMP"));`
+        : '';
+    // PK getter: 단일은 entity.getXxx(), 복합은 entity.getId().getXxx()
+    const pkGetter = c => isComposite
+        ? `entity.getId().get${fmCap(c.javaName)}()`
+        : `entity.get${fmCap(c.javaName)}()`;
+    const updPkGuard = (isComposite ? ['entity.getId() == null', ...pkCols.map(c => `${pkGetter(c)} == null`)]
+                                    : pkCols.map(c => `${pkGetter(c)} == null`)).join(' || ');
+    const updWhere = pkCols.map(c => {
+        const path = isComposite ? `${varName}.id.${c.javaName}` : `${varName}.${c.javaName}`;
+        return `${path}.eq(${pkGetter(c)})`;
+    }).join('.and(') + (isComposite ? ')'.repeat(pkCols.length - 1) : '');
+
     return `package ${pkg}.repository.qrydsl.impl;
 
+import ${pkg}.domain.${className};
 import ${pkg}.dto.${className}Dto;
 import ${pkg}.domain.Q${className};
 import ${pkg}.repository.qrydsl.Q${className}Repository;
@@ -337,11 +471,18 @@ import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.PathBuilder;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.types.dsl.StringPath;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.querydsl.jpa.impl.JPAUpdateClause;
 import lombok.RequiredArgsConstructor;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -386,7 +527,7 @@ public class Q${className}RepositoryImpl implements Q${className}Repository {
 
     /** 페이지 목록 (pageNo/pageSize 미지정 시 1페이지/10건 기본) */
     @Override
-    public ${className}Dto.Response selectPageList(${className}Dto.Request search) {
+    public ${className}Dto.Response selectPageData(${className}Dto.Request search) {
         int pageNo   = search.getPageNo()   > 0 ? search.getPageNo()   : 1;
         int pageSize = search.getPageSize() > 0 ? search.getPageSize() : 10;
         int offset   = (pageNo - 1) * pageSize;
@@ -423,12 +564,13 @@ public class Q${className}RepositoryImpl implements Q${className}Repository {
                 .from(${varName});
     }
 
-    /** 검색조건 빌드 */
+    /** 검색조건 빌드 — 개별 baseAndXxx() BooleanExpression 을 누적 (null 은 자동 무시) */
     private BooleanBuilder buildCondition(${className}Dto.Request s) {
         BooleanBuilder b = new BooleanBuilder();
-${conditions}${searchValueBlock}
+${conditionCalls}${dateRangeCall}${searchValueCall}
         return b;
     }
+${condHelperBlock}
 
     /** 정렬조건 빌드
      * 예제: "exam1Id asc", "exam1Nm desc, col11 asc"
@@ -451,6 +593,22 @@ ${conditions}${searchValueBlock}
         }
         return orders;
     }
+
+    /** 동적 부분 수정 — null 이 아닌 필드만 set (updDt 는 DB CURRENT_TIMESTAMP 강제) */
+    @Override
+    public int updateSelective(${className} entity) {
+        if (${updPkGuard}) return 0;
+
+        JPAUpdateClause update = queryFactory.update(${varName});
+        boolean hasAny = false;
+
+${updSetLines}${updIdLine}${updDtLine}
+
+        if (!hasAny) return 0;
+
+        long affected = update.where(${updWhere}).execute();
+        return (int) affected;
+    }
 }
 `;
 }
@@ -471,20 +629,17 @@ function gnServiceSource(pkg, className, pkCols, nonPkCols) {
     // saveOne/saveList 에서 req PK 값으로 update/delete 호출용
     const pkGettersFromReq = pkCols.map(c => 'req.get' + fmCap(c.javaName) + '()').join(', ');
 
-    const setters = nonPkCols.map(c =>
-        `        e.set${fmCap(c.javaName)}(req.get${fmCap(c.javaName)}());`
-    ).join('\n');
-
-    // patch: null 이 아닌 필드만 setter 호출 (PATCH 부분 업데이트)
-    const patchSetters = nonPkCols.map(c =>
-        `        if (req.get${fmCap(c.javaName)}() != null) e.set${fmCap(c.javaName)}(req.get${fmCap(c.javaName)}());`
-    ).join('\n');
+    // PK 를 path 값으로 (재)세팅 — 복합은 e.setId(new XxxId(...)), 단일은 e.setPk(pk)
+    const pkSetterOnEntity = isComposite
+        ? `        e.setId(new ${className}Id(${argsCall}));`
+        : `        e.set${fmCap(pkCols[0].javaName)}(${pkCols[0].javaName});`;
 
     return `package ${pkg}.service;
 
 import ${pkg}.dto.${className}Dto;
 import ${pkg}.domain.${className};
 ${idImport}import ${pkg}.repository.${className}Repository;
+import ${pkg}.util.VoUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -512,8 +667,8 @@ public class ${className}Service {
     }
 
     /** 페이지 목록 */
-    public ${className}Dto.Response selectPageList(${className}Dto.Request search) {
-        return repo.selectPageList(search);
+    public ${className}Dto.Response selectPageData(${className}Dto.Request search) {
+        return repo.selectPageData(search);
     }
 
     /** 등록 */
@@ -530,7 +685,8 @@ public class ${className}Service {
     public ${className}Dto.Item update(${args}, ${className}Dto.Request req) {
         ${className} e = ${findById}
                 .orElseThrow(() -> new NoSuchElementException("${className} not found"));
-${setters}
+        VoUtil.voCopy(req, e);      // 동일 이름 필드 전체 복사
+${pkSetterOnEntity}      // PK 는 path 값으로 고정
         return ${className}Dto.Item.from(e);
     }
 
@@ -539,8 +695,22 @@ ${setters}
     public ${className}Dto.Item patch(${args}, ${className}Dto.Request req) {
         ${className} e = ${findById}
                 .orElseThrow(() -> new NoSuchElementException("${className} not found"));
-${patchSetters}
+        VoUtil.voCopyIgnoreNull(req, e);    // null 아닌 필드만 복사
+${pkSetterOnEntity}      // PK 는 path 값으로 고정
         return ${className}Dto.Item.from(e);
+    }
+
+    /** 동적 부분 수정 (QueryDSL bulk UPDATE - null 이 아닌 필드만 반영, updDt 는 DB CURRENT_TIMESTAMP) */
+    @Transactional
+    public ${className}Dto.Item updateSelective(${args}, ${className}Dto.Request req) {
+        ${className} patch = new ${className}();
+        VoUtil.voCopy(req, patch);  // 동일 이름 필드 복사 (null 도 그대로 → repo 에서 null 은 set 제외)
+${pkSetterOnEntity.replace(/\be\.set/g, 'patch.set')}      // PK 는 path 값으로 고정
+        int affected = repo.updateSelective(patch);
+        if (affected == 0) {
+            throw new NoSuchElementException("${className} not found or nothing to update");
+        }
+        return selectById(${argsCall});
     }
 
     /** 삭제 */
@@ -642,8 +812,8 @@ public class ${className}Controller {
     /** 페이지 목록 */
     @Operation(summary = "페이지 목록")
     @GetMapping("/page-list")
-    public ResponseEntity<${className}Dto.Response> selectPageList(@ModelAttribute ${className}Dto.Request search) {
-        return ResponseEntity.ok(service.selectPageList(search));
+    public ResponseEntity<${className}Dto.Response> selectPageData(@ModelAttribute ${className}Dto.Request search) {
+        return ResponseEntity.ok(service.selectPageData(search));
     }
 
     /** 전체 목록 */
@@ -676,6 +846,16 @@ public class ${className}Controller {
             ${args},
             @RequestBody ${className}Dto.Request req) {
         return ResponseEntity.ok(service.patch(${argsCall}, req));
+    }
+
+    /** 동적 부분 수정 (QueryDSL bulk UPDATE) */
+    @Operation(summary = "동적 부분 수정 (selective)",
+               description = "QueryDSL bulk UPDATE - null 이 아닌 필드만 반영, updDt 는 DB CURRENT_TIMESTAMP")
+    @PatchMapping("/${pathSeg}/selective")
+    public ResponseEntity<${className}Dto.Item> updateSelective(
+            ${args},
+            @RequestBody ${className}Dto.Request req) {
+        return ResponseEntity.ok(service.updateSelective(${argsCall}, req));
     }
 
     /** 삭제 */

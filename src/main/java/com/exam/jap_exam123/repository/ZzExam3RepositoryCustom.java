@@ -12,5 +12,5 @@ public interface ZzExam3RepositoryCustom {
     /** 전체 목록 */
     List<ZzExam3Dto.Item> selectList(ZzExam3Dto.Request search);
     /** 페이지 목록 */
-    ZzExam3Dto.Response selectPageList(ZzExam3Dto.Request search);
+    ZzExam3Dto.Response selectPageData(ZzExam3Dto.Request search);
 }

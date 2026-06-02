@@ -73,7 +73,7 @@ ${formFieldsArr}
   async function searchPage(p = 1) {
     search = { ...search, pageNo: p };
     try {
-      const data = await api.selectPageList(search);
+      const data = await api.selectPageData(search);
       list = data.pageList || [];
       page = data;
     } catch (e) { alert(e.message); }
@@ -352,7 +352,7 @@ export const selectOne   = (row) => api(BASE + idPath(row));
 /** 전체 목록 */
 export const selectList  = (search) => api(\`\${BASE}/list?\${buildQs(search)}\`);
 /** 페이지 목록 */
-export const selectPageList  = (search) => api(\`\${BASE}/page-list?\${buildQs(search)}\`);
+export const selectPageData  = (search) => api(\`\${BASE}/page-list?\${buildQs(search)}\`);
 /** 등록 */
 export const create     = (form) => api(BASE, { method: 'POST', body: JSON.stringify(form) });
 /** 수정 (전체 교체) */

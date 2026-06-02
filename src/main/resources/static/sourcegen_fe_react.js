@@ -73,7 +73,7 @@ export default function ${className}Page() {
         const next = { ...search, pageNo: p };
         setSearch(next);
         try {
-            const data = await api.selectPageList(next);
+            const data = await api.selectPageData(next);
             setList(data.pageList || []);
             setPage(data);
         } catch (e) { alert(e.message); }

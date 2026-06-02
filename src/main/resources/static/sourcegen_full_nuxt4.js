@@ -167,7 +167,7 @@ export const use${className}Api = () => {
     return new URLSearchParams(params as any).toString();
   }
 
-  const selectPageList = (search: Record<string, any>) =>
+  const selectPageData = (search: Record<string, any>) =>
     $fetch<${className}PageResponse>(\`\${BASE}/page-list?\${buildQs(search)}\`);
 
   const selectOne = (${pkParams}) =>
@@ -188,7 +188,7 @@ export const use${className}Api = () => {
   const saveList = (rows: ${className}[]) =>
     $fetch<void>(\`\${BASE}/save-list\`, { method: 'POST', body: rows });
 
-  return { selectPageList, selectOne, create, update, remove, saveOne, saveList };
+  return { selectPageData, selectOne, create, update, remove, saveOne, saveList };
 };
 `;
 }
@@ -276,7 +276,7 @@ export async function selectList(req: ${className}SearchReq): Promise<${classNam
   return await prisma.${lowerCls}.findMany(args) as unknown as ${className}[];
 }
 
-export async function selectPageList(req: ${className}SearchReq): Promise<${className}PageResponse> {
+export async function selectPageData(req: ${className}SearchReq): Promise<${className}PageResponse> {
   const pageNo   = (req.pageNo   ?? 0) > 0 ? req.pageNo!   : 1;
   const pageSize = (req.pageSize ?? 0) > 0 ? req.pageSize! : 10;
 
@@ -331,7 +331,7 @@ export async function deleteOne(${pkArgs}): Promise<boolean> {
 // ----- server/api/<endpoint>/page-list.get.ts -----
 function gnFullNxApiPageListSource(endpoint, className) {
     return `// GET /api/${endpoint}/page-list
-import { selectPageList, type ${className}SearchReq } from '~/server/utils/${endpoint}Repo';
+import { selectPageData, type ${className}SearchReq } from '~/server/utils/${endpoint}Repo';
 
 export default defineEventHandler(async (event) => {
   const q = getQuery(event) as Record<string, any>;
@@ -341,7 +341,7 @@ export default defineEventHandler(async (event) => {
     pageSize: q.pageSize ? Number(q.pageSize) : 10,
     sortBy:   q.sortBy as string | undefined,
   };
-  return await selectPageList(req);
+  return await selectPageData(req);
 });
 `;
 }
@@ -495,7 +495,7 @@ const rowKey = (row: ${className}) => PK.map(k => row[k as keyof ${className}]).
 async function searchPage(p = 1) {
   search.value = { ...search.value, pageNo: p };
   try {
-    const data = await api.selectPageList(search.value);
+    const data = await api.selectPageData(search.value);
     list.value = data.pageList || [];
     page.value = data;
   } catch (e: any) { alert(e.message); }

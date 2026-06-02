@@ -103,7 +103,7 @@ if (StringUtils.hasText(s.getExam1Nm()))
 | 메서드 | 사용 시점 | 설명 |
 |---|---|---|
 | `toEntity()` | Service.insert() | DB 저장용 엔티티 생성 |
-| `getOffset()` | Repository.selectPageList() | `(page-1)*size` |
+| `getOffset()` | Repository.selectPageData() | `(page-1)*size` |
 | getter 들 | Repository.buildCondition() | 검색조건 추출 |
 | getter 들 | Service.update() | 엔티티 setter 호출 |
 
@@ -126,7 +126,7 @@ return ZzExam1Dto.Item.from(saved);   // ← from()
 #### 경로 B: QueryDSL 직접 매핑 (조회 응답)
 
 ```java
-// Repository Impl - selectById, selectList, selectPageList
+// Repository Impl - selectById, selectList, selectPageData
 queryFactory
     .select(new QZzExam1Dto_Item(    // ← @QueryProjection 생성자
         exam1.exam1Id, exam1.exam1Nm,
@@ -177,7 +177,7 @@ Spring 이 Jackson 으로 JSON 직렬화 → 클라이언트로 전송.
 ### 1) Repository Impl 에서 조립
 
 ```java
-public ZzExam1Dto.Response selectPageList(ZzExam1Dto.Request search) {
+public ZzExam1Dto.Response selectPageData(ZzExam1Dto.Request search) {
     // 1. content 조회 (페이징 적용)
     List<ZzExam1Dto.Item> content = queryFactory
             .select(new QZzExam1Dto_Item(...))
@@ -226,8 +226,8 @@ public static Response of(List<Item> content, long totalCount, int page, int siz
 
 ```java
 @GetMapping("/page-list")
-public ResponseEntity<ZzExam1Dto.Response> selectPageList(ZzExam1Dto.Request search) {
-    return ResponseEntity.ok(service.selectPageList(search));
+public ResponseEntity<ZzExam1Dto.Response> selectPageData(ZzExam1Dto.Request search) {
+    return ResponseEntity.ok(service.selectPageData(search));
 }
 ```
 
@@ -270,7 +270,7 @@ page.value = {
 // === Exam1 ===
 GET    /api/exam1/{id}              → Item                  selectById(String id)
 GET    /api/exam1/list              → List<Item>            selectList(Request)
-GET    /api/exam1/page-list         → Response              selectPageList(Request)
+GET    /api/exam1/page-list         → Response              selectPageData(Request)
 POST   /api/exam1                   → Item                  insert(@RequestBody Request)
 PUT    /api/exam1/{id}              → Item                  update(id, @RequestBody Request)
 DELETE /api/exam1/{id}              → 204                   delete(String id)
@@ -313,7 +313,7 @@ PUT /api/exam1/A001  body: { exam1Nm: "수정" }
 
 **왜?** 엔티티는 `exam1` 테이블 자기 컬럼만 들고 있고, `exam2.exam1Nm` 같은 컬럼은 LEFT JOIN 결과라 엔티티에 없음.
 
-### 3) `selectList` vs `selectPageList` — 응답 타입이 다름
+### 3) `selectList` vs `selectPageData` — 응답 타입이 다름
 
 ```java
 GET /api/exam1/list        → List<Item>           // 배열
@@ -326,7 +326,7 @@ GET /api/exam1/page-list   → Response             // { content: [...], totalCo
 
 ### 4) `Response.content` 안의 `Item` 은 LEFT JOIN 결과
 
-`selectPageList` 의 `content[i]` 는 QueryDSL `select(new QXxxDto_Item(...))` 로 만들어진 것이라 부모 이름 `exam1Nm`, `exam2Nm` 모두 채워져 있다.
+`selectPageData` 의 `content[i]` 는 QueryDSL `select(new QXxxDto_Item(...))` 로 만들어진 것이라 부모 이름 `exam1Nm`, `exam2Nm` 모두 채워져 있다.
 
 ### 5) `Request` 의 페이징 필드는 `selectList` 에서는 무시됨
 
@@ -371,7 +371,7 @@ return ZzExam1Dto.Item.from(saved);
 fetch('/api/exam1/page-list?exam1Nm=카테&sortBy=exam1Id desc&page=1&size=10');
 
 // Controller (Request 가 query string 에서 자동 바인딩)
-public ResponseEntity<ZzExam1Dto.Response> selectPageList(ZzExam1Dto.Request search) { ... }
+public ResponseEntity<ZzExam1Dto.Response> selectPageData(ZzExam1Dto.Request search) { ... }
 
 // Repository Impl - Item 직접 매핑 + Response 조립
 List<Item> content = queryFactory.select(new QZzExam1Dto_Item(...))....fetch();

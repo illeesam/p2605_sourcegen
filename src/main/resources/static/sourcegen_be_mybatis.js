@@ -129,7 +129,7 @@ public interface ${className}Mapper {
     List<${className}Dto.Item> selectList(${argsForSearch});
 
     /** 페이지 목록 */
-    List<${className}Dto.Item> selectPageList(${argsForSearch});
+    List<${className}Dto.Item> selectPageData(${argsForSearch});
 
     /** 전체 건수 (검색조건 적용) */
     long selectTotalCount(${argsForSearch});
@@ -253,8 +253,8 @@ ${sortChoose}
     </select>
 
     <!-- 페이지 목록 -->
-    <select id="selectPageList" resultMap="${className}ItemMap">
-        /* ${className}Mapper :: selectPageList */
+    <select id="selectPageData" resultMap="${className}ItemMap">
+        /* ${className}Mapper :: selectPageData */
         SELECT ${colList}
           FROM ${table} ${TA}
          <where><include refid="conditions"/></where>
@@ -344,12 +344,12 @@ public class ${className}Service {
     }
 
     /** 페이지 목록 */
-    public ${className}Dto.Response selectPageList(${className}Dto.Request search) {
+    public ${className}Dto.Response selectPageData(${className}Dto.Request search) {
         int pageNo   = search.getPageNo()   > 0 ? search.getPageNo()   : 1;
         int pageSize = search.getPageSize() > 0 ? search.getPageSize() : 10;
         search.setPageNo(pageNo);
         search.setPageSize(pageSize);
-        List<${className}Dto.Item> rows = mapper.selectPageList(search);
+        List<${className}Dto.Item> rows = mapper.selectPageData(search);
         long total = mapper.selectTotalCount(search);
         return ${className}Dto.Response.of(rows, total, pageNo, pageSize,
                 ${className}Dto.Response.toCond(search));
@@ -463,8 +463,8 @@ public class ${className}Controller {
 
     @Operation(summary = "페이지 목록")
     @GetMapping("/page-list")
-    public ResponseEntity<${className}Dto.Response> selectPageList(@ModelAttribute ${className}Dto.Request search) {
-        return ResponseEntity.ok(service.selectPageList(search));
+    public ResponseEntity<${className}Dto.Response> selectPageData(@ModelAttribute ${className}Dto.Request search) {
+        return ResponseEntity.ok(service.selectPageData(search));
     }
 
     @Operation(summary = "전체 목록")

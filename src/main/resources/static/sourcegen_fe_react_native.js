@@ -139,7 +139,7 @@ function buildQs(obj: Record<string, any>): string {
   return new URLSearchParams(params as any).toString();
 }
 
-export const selectPageList = (search: Record<string, any>): Promise<${className}PageResponse> =>
+export const selectPageData = (search: Record<string, any>): Promise<${className}PageResponse> =>
   api(\`\${BASE}/page-list?\${buildQs(search)}\`);
 
 export const selectOne = (${pkParams}): Promise<${className}> =>
@@ -204,7 +204,7 @@ export default function ${className}Screen() {
     try {
       const next = { ...search, pageNo: p };
       setSearch(next);
-      const data = await api.selectPageList(next);
+      const data = await api.selectPageData(next);
       setList(data.pageList || []);
       setPage(data);
     } catch (e: any) {

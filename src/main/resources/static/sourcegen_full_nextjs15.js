@@ -187,7 +187,7 @@ function buildQs(obj: Record<string, any>): string {
   return new URLSearchParams(params as any).toString();
 }
 
-export const selectPageList = (search: Record<string, any>): Promise<${className}PageResponse> =>
+export const selectPageData = (search: Record<string, any>): Promise<${className}PageResponse> =>
   api(\`\${BASE}/page-list?\${buildQs(search)}\`);
 
 export const selectOne = (${pkParams}): Promise<${className}> =>
@@ -276,7 +276,7 @@ export async function selectList(req: ${className}SearchReq): Promise<${classNam
   return await prisma.${lowerCls}.findMany(args) as unknown as ${className}[];
 }
 
-export async function selectPageList(req: ${className}SearchReq): Promise<${className}PageResponse> {
+export async function selectPageData(req: ${className}SearchReq): Promise<${className}PageResponse> {
   const pageNo   = (req.pageNo   ?? 0) > 0 ? req.pageNo!   : 1;
   const pageSize = (req.pageSize ?? 0) > 0 ? req.pageSize! : 10;
 
@@ -332,7 +332,7 @@ export async function deleteOne(${pkArgs}): Promise<boolean> {
 function gnFullNextRoutePageListSource(endpoint, className) {
     return `// GET /api/${endpoint}/page-list
 import { NextResponse, type NextRequest } from 'next/server';
-import { selectPageList, type ${className}SearchReq } from '@/lib/${endpoint}Repo';
+import { selectPageData, type ${className}SearchReq } from '@/lib/${endpoint}Repo';
 
 export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams;
@@ -346,7 +346,7 @@ export async function GET(request: NextRequest) {
       (req as any)[k] = v;
     }
   });
-  return NextResponse.json(await selectPageList(req));
+  return NextResponse.json(await selectPageData(req));
 }
 `;
 }
@@ -493,7 +493,7 @@ export default function ${className}Page() {
     const next = { ...search, pageNo: p };
     setSearch(next);
     try {
-      const data = await api.selectPageList(next);
+      const data = await api.selectPageData(next);
       setList(data.pageList || []);
       setPage(data);
     } catch (e: any) { alert(e.message); }

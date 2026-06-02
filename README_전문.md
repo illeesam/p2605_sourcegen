@@ -41,7 +41,7 @@
 |---|---|
 | `Item` | 단건 조회 (selectById), 등록/수정 응답 |
 | `List<Item>` | 전체 목록 (selectList) |
-| `Response { content, totalCount, page, size, totalPages }` | 페이지 목록 (selectPageList) |
+| `Response { content, totalCount, page, size, totalPages }` | 페이지 목록 (selectPageData) |
 
 ---
 

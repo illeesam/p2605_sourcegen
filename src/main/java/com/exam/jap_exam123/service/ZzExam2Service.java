@@ -32,8 +32,8 @@ public class ZzExam2Service {
     }
 
     /** 페이지 목록 */
-    public ZzExam2Dto.Response selectPageList(ZzExam2Dto.Request search) {
-        return repo.selectPageList(search);
+    public ZzExam2Dto.Response selectPageData(ZzExam2Dto.Request search) {
+        return repo.selectPageData(search);
     }
 
     /** 등록 */

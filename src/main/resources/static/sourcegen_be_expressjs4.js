@@ -253,7 +253,7 @@ export async function selectList(req: ${className}Request): Promise<${className}
 }
 
 /** 페이지 목록 */
-export async function selectPageList(req: ${className}Request): Promise<${className}Response> {
+export async function selectPageData(req: ${className}Request): Promise<${className}Response> {
   const pageNo   = (req.pageNo   ?? 0) > 0 ? req.pageNo!   : 1;
   const pageSize = (req.pageSize ?? 0) > 0 ? req.pageSize! : 10;
 
@@ -349,7 +349,7 @@ export async function pageList(req: Request, res: Response, next: NextFunction) 
       pageNo:   req.query.pageNo   ? Number(req.query.pageNo)   : 1,
       pageSize: req.query.pageSize ? Number(req.query.pageSize) : 10,
     } as ${className}Request;
-    res.json(await service.selectPageList(r));
+    res.json(await service.selectPageData(r));
   } catch (e) { next(e); }
 }
 

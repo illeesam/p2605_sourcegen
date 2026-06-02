@@ -73,7 +73,7 @@ const rowKey = (row) => PK.map(k => row[k]).join('|');
 async function searchPage(p = 1) {
   search.pageNo = p;
   try {
-    const data = await api.selectPageList(search);
+    const data = await api.selectPageData(search);
     setArr(list, data.pageList || []);
     setObj(page, data);
   } catch (e) { alert(e.message); }

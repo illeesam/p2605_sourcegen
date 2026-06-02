@@ -166,7 +166,7 @@ class ${className}Service {
   ));
 
   /// 페이지 목록 조회
-  Future<${className}PageResponse> selectPageList(Map<String, dynamic> search) async {
+  Future<${className}PageResponse> selectPageData(Map<String, dynamic> search) async {
     final qs = search.entries
         .where((e) => e.value != null && e.value.toString().isNotEmpty)
         .map((e) => '\${Uri.encodeQueryComponent(e.key)}=\${Uri.encodeQueryComponent(e.value.toString())}')
@@ -316,7 +316,7 @@ ${searchToMap}
         'pageSize': _pageSize,
         'sortBy': _sortBy,
       };
-      final res = await _service.selectPageList(params);
+      final res = await _service.selectPageData(params);
       setState(() {
         _list = res.pageList;
         _pageNo = res.pageNo;

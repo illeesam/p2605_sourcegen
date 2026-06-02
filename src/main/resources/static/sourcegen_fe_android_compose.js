@@ -207,7 +207,7 @@ import retrofit2.http.*
 interface ${className}ApiService {
 
     @GET("${endpoint}/page-list")
-    suspend fun selectPageList(@QueryMap params: Map<String, String>): ${className}PageResponse
+    suspend fun selectPageData(@QueryMap params: Map<String, String>): ${className}PageResponse
 
     @GET("${endpoint}/list")
     suspend fun selectList(@QueryMap params: Map<String, String>): List<${className}>
@@ -324,7 +324,7 @@ fun ${className}Screen() {
             try {
                 val params = (search.value + mapOf("pageNo" to p.toString(), "pageSize" to pageSize.value.toString()))
                     .filterValues { it.isNotEmpty() }
-                val res = api.selectPageList(params)
+                val res = api.selectPageData(params)
                 list.value           = res.pageList
                 pageNo.value         = res.pageNo
                 pageSize.value       = res.pageSize

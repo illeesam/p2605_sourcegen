@@ -34,8 +34,8 @@ public class ZzExam3Service {
     }
 
     /** 페이지 목록 */
-    public ZzExam3Dto.Response selectPageList(ZzExam3Dto.Request search) {
-        return repo.selectPageList(search);
+    public ZzExam3Dto.Response selectPageData(ZzExam3Dto.Request search) {
+        return repo.selectPageData(search);
     }
 
     /** 등록 */

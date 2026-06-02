@@ -35,10 +35,10 @@ public class ZzExam1Controller {
     /** 페이지 목록 */
     @Operation(summary = "페이지 목록", description = "검색조건 + 페이징 + 정렬")
     @GetMapping("/page-list")
-    public ResponseEntity<ZzExam1Dto.Response> selectPageList(
+    public ResponseEntity<ZzExam1Dto.Response> selectPageData(
             @Parameter(description = "검색조건 / page / size / sortBy(예: exam1Id desc)")
             @ModelAttribute ZzExam1Dto.Request search) {
-        return ResponseEntity.ok(service.selectPageList(search));
+        return ResponseEntity.ok(service.selectPageData(search));
     }
 
     /** 전체 목록 */
@@ -67,6 +67,18 @@ public class ZzExam1Controller {
             @Parameter(description = "exam1 PK", example = "A001") @PathVariable String exam1Id,
             @Valid @RequestBody ZzExam1Dto.Request req) {
         return ResponseEntity.ok(service.update(exam1Id, req));
+    }
+
+    /** 동적 부분 수정 (QueryDSL bulk UPDATE) */
+    @Operation(summary = "동적 부분 수정 (selective)",
+               description = "QueryDSL bulk UPDATE - null 이 아닌 필드만 반영, updDt 는 DB CURRENT_TIMESTAMP")
+    @ApiResponse(responseCode = "200", description = "성공")
+    @ApiResponse(responseCode = "404", description = "데이터 없음 또는 변경 항목 없음")
+    @PatchMapping("/{exam1Id}/selective")
+    public ResponseEntity<ZzExam1Dto.Item> updateSelective(
+            @Parameter(description = "exam1 PK", example = "A001") @PathVariable String exam1Id,
+            @RequestBody ZzExam1Dto.Request req) {
+        return ResponseEntity.ok(service.updateSelective(exam1Id, req));
     }
 
     /** 삭제 */
