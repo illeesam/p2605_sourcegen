@@ -111,7 +111,7 @@ public class QZzExam1RepositoryImpl implements QZzExam1Repository {
         List<OrderSpecifier<?>> orderList = buildOrder(search);
 
         // 목록/카운트 공통 검색조건 (null 요소는 .where 가 자동 무시)
-        BooleanExpression[] conds = {
+        BooleanExpression[] wheres = {
                 baseAndExam1Id(search),
                 baseAndExam1Nm(search),
                 baseAndCol11(search),
@@ -123,7 +123,7 @@ public class QZzExam1RepositoryImpl implements QZzExam1Repository {
                 baseAndSearchValue(search)
         };
 
-        var query = buildBaseQuery().where(conds);
+        var query = buildBaseQuery().where(wheres);
         if (!orderList.isEmpty()) {
             query = query.orderBy(orderList.toArray(OrderSpecifier[]::new));
         }
@@ -134,7 +134,7 @@ public class QZzExam1RepositoryImpl implements QZzExam1Repository {
         Long total = queryFactory
                 .select(exam1.count())
                 .from(exam1)
-                .where(conds)
+                .where(wheres)
                 .fetchOne();
 
         return ZzExam1Dto.Response.of(content, total == null ? 0L : total, pageNo, pageSize);

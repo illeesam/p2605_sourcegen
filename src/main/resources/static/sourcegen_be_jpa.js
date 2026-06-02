@@ -540,11 +540,11 @@ ${whereArgs}
         List<OrderSpecifier<?>> orderList = buildOrder(search);
 
         // 목록/카운트 공통 검색조건 (null 요소는 .where 가 자동 무시)
-        BooleanExpression[] conds = {
+        BooleanExpression[] wheres = {
 ${whereArgs}
         };
 
-        var query = buildBaseQuery().where(conds);
+        var query = buildBaseQuery().where(wheres);
         if (!orderList.isEmpty()) {
             query = query.orderBy(orderList.toArray(OrderSpecifier[]::new));
         }
@@ -555,7 +555,7 @@ ${whereArgs}
         Long total = queryFactory
                 .select(${varName}.count())
                 .from(${varName})
-                .where(conds)
+                .where(wheres)
                 .fetchOne();
 
         return ${className}Dto.Response.of(content, total == null ? 0L : total, pageNo, pageSize,

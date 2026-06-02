@@ -97,7 +97,7 @@ public class ZzExam2RepositoryCustomImpl implements ZzExam2RepositoryCustom {
         List<OrderSpecifier<?>> orderList = buildOrder(search);
 
         // 목록/카운트 공통 검색조건 (null 요소는 .where 가 자동 무시)
-        BooleanExpression[] conds = {
+        BooleanExpression[] wheres = {
                 baseAndExam1Id(search),
                 baseAndExam1Nm(search),
                 baseAndExam2Id(search),
@@ -111,7 +111,7 @@ public class ZzExam2RepositoryCustomImpl implements ZzExam2RepositoryCustom {
                 baseAndSearchValue(search)
         };
 
-        var query = buildBaseQuery().where(conds);
+        var query = buildBaseQuery().where(wheres);
         if (!orderList.isEmpty()) {
             query = query.orderBy(orderList.toArray(OrderSpecifier[]::new));
         }
@@ -123,7 +123,7 @@ public class ZzExam2RepositoryCustomImpl implements ZzExam2RepositoryCustom {
                 .select(exam2.count())
                 .from(exam2)
                 .leftJoin(exam1).on(exam1.exam1Id.eq(exam2.id.exam1Id))
-                .where(conds)
+                .where(wheres)
                 .fetchOne();
 
         return ZzExam2Dto.Response.of(content, total == null ? 0L : total, pageNo, pageSize);
