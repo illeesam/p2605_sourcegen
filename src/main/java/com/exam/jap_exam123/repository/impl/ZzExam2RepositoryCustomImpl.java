@@ -5,15 +5,20 @@ import com.exam.jap_exam123.dto.ZzExam2Dto;
 import com.exam.jap_exam123.domain.QZzExam1;
 import com.exam.jap_exam123.domain.QZzExam2;
 import com.exam.jap_exam123.repository.ZzExam2RepositoryCustom;
-import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.PathBuilder;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.StringPath;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -55,10 +60,21 @@ public class ZzExam2RepositoryCustomImpl implements ZzExam2RepositoryCustom {
     /** 전체 목록 (page/size 가 양수면 페이징 적용) */
     @Override
     public List<ZzExam2Dto.Item> selectList(ZzExam2Dto.Request search) {
-        BooleanBuilder where = buildCondition(search);
         List<OrderSpecifier<?>> orderList = buildOrder(search);
         var query = buildBaseQuery()
-                .where(where);
+                .where(
+                        baseAndExam1Id(search),
+                        baseAndExam1Nm(search),
+                        baseAndExam2Id(search),
+                        baseAndExam2Nm(search),
+                        baseAndCol21(search),
+                        baseAndCol22(search),
+                        baseAndCol23(search),
+                        baseAndCol24(search),
+                        baseAndCol25(search),
+                        baseAndDateRange(search),
+                        baseAndSearchValue(search)
+                );
         if (!orderList.isEmpty()) {
             query.orderBy(orderList.toArray(OrderSpecifier[]::new));
         }
@@ -78,11 +94,22 @@ public class ZzExam2RepositoryCustomImpl implements ZzExam2RepositoryCustom {
         int offset   = (pageNo - 1) * pageSize;
         int limit    = pageSize;
 
-        BooleanBuilder where = buildCondition(search);
         List<OrderSpecifier<?>> orderList = buildOrder(search);
 
         var query = buildBaseQuery()
-                .where(where);
+                .where(
+                        baseAndExam1Id(search),
+                        baseAndExam1Nm(search),
+                        baseAndExam2Id(search),
+                        baseAndExam2Nm(search),
+                        baseAndCol21(search),
+                        baseAndCol22(search),
+                        baseAndCol23(search),
+                        baseAndCol24(search),
+                        baseAndCol25(search),
+                        baseAndDateRange(search),
+                        baseAndSearchValue(search)
+                );
         if (!orderList.isEmpty()) {
             query = query.orderBy(orderList.toArray(OrderSpecifier[]::new));
         }
@@ -94,25 +121,125 @@ public class ZzExam2RepositoryCustomImpl implements ZzExam2RepositoryCustom {
                 .select(exam2.count())
                 .from(exam2)
                 .leftJoin(exam1).on(exam1.exam1Id.eq(exam2.id.exam1Id))
-                .where(where)
+                .where(
+                        baseAndExam1Id(search),
+                        baseAndExam1Nm(search),
+                        baseAndExam2Id(search),
+                        baseAndExam2Nm(search),
+                        baseAndCol21(search),
+                        baseAndCol22(search),
+                        baseAndCol23(search),
+                        baseAndCol24(search),
+                        baseAndCol25(search),
+                        baseAndDateRange(search),
+                        baseAndSearchValue(search)
+                )
                 .fetchOne();
 
         return ZzExam2Dto.Response.of(content, total == null ? 0L : total, pageNo, pageSize);
     }
 
-    /** 검색조건 빌드 */
-    private BooleanBuilder buildCondition(ZzExam2Dto.Request s) {
-        BooleanBuilder b = new BooleanBuilder();
-        if (StringUtils.hasText(s.getExam1Id())) b.and(exam2.id.exam1Id.containsIgnoreCase(s.getExam1Id()));
-        if (StringUtils.hasText(s.getExam1Nm())) b.and(exam1.exam1Nm.like("%" + s.getExam1Nm() + "%"));
-        if (StringUtils.hasText(s.getExam2Id())) b.and(exam2.id.exam2Id.containsIgnoreCase(s.getExam2Id()));
-        if (StringUtils.hasText(s.getExam2Nm())) b.and(exam2.exam2Nm.like("%" + s.getExam2Nm() + "%"));
-        if (StringUtils.hasText(s.getCol21())) b.and(exam2.col21.containsIgnoreCase(s.getCol21()));
-        if (StringUtils.hasText(s.getCol22())) b.and(exam2.col22.containsIgnoreCase(s.getCol22()));
-        if (StringUtils.hasText(s.getCol23())) b.and(exam2.col23.containsIgnoreCase(s.getCol23()));
-        if (StringUtils.hasText(s.getCol24())) b.and(exam2.col24.containsIgnoreCase(s.getCol24()));
-        if (StringUtils.hasText(s.getCol25())) b.and(exam2.col25.containsIgnoreCase(s.getCol25()));
-        return b;
+    /* =============================================================
+     * 검색조건 — 개별 andXxx() BooleanExpression 반환 메서드 모음
+     * null 반환은 BooleanBuilder.and(...) 가 자동 무시
+     * ============================================================= */
+
+    /* exam1Id 정확 일치 (PK - 복합 id 경유) */
+    private BooleanExpression baseAndExam1Id(ZzExam2Dto.Request s) {
+        return s != null && StringUtils.hasText(s.getExam1Id())
+                ? exam2.id.exam1Id.eq(s.getExam1Id()) : null;
+    }
+
+    /* exam1Nm LIKE (조인 부모 테이블) */
+    private BooleanExpression baseAndExam1Nm(ZzExam2Dto.Request s) {
+        return s != null && StringUtils.hasText(s.getExam1Nm())
+                ? exam1.exam1Nm.containsIgnoreCase(s.getExam1Nm()) : null;
+    }
+
+    /* exam2Id 정확 일치 (PK - 복합 id 경유) */
+    private BooleanExpression baseAndExam2Id(ZzExam2Dto.Request s) {
+        return s != null && StringUtils.hasText(s.getExam2Id())
+                ? exam2.id.exam2Id.eq(s.getExam2Id()) : null;
+    }
+
+    /* exam2Nm LIKE */
+    private BooleanExpression baseAndExam2Nm(ZzExam2Dto.Request s) {
+        return s != null && StringUtils.hasText(s.getExam2Nm())
+                ? exam2.exam2Nm.containsIgnoreCase(s.getExam2Nm()) : null;
+    }
+
+    /* col21 LIKE */
+    private BooleanExpression baseAndCol21(ZzExam2Dto.Request s) {
+        return s != null && StringUtils.hasText(s.getCol21())
+                ? exam2.col21.containsIgnoreCase(s.getCol21()) : null;
+    }
+
+    /* col22 LIKE */
+    private BooleanExpression baseAndCol22(ZzExam2Dto.Request s) {
+        return s != null && StringUtils.hasText(s.getCol22())
+                ? exam2.col22.containsIgnoreCase(s.getCol22()) : null;
+    }
+
+    /* col23 LIKE */
+    private BooleanExpression baseAndCol23(ZzExam2Dto.Request s) {
+        return s != null && StringUtils.hasText(s.getCol23())
+                ? exam2.col23.containsIgnoreCase(s.getCol23()) : null;
+    }
+
+    /* col24 LIKE */
+    private BooleanExpression baseAndCol24(ZzExam2Dto.Request s) {
+        return s != null && StringUtils.hasText(s.getCol24())
+                ? exam2.col24.containsIgnoreCase(s.getCol24()) : null;
+    }
+
+    /* col25 LIKE */
+    private BooleanExpression baseAndCol25(ZzExam2Dto.Request s) {
+        return s != null && StringUtils.hasText(s.getCol25())
+                ? exam2.col25.containsIgnoreCase(s.getCol25()) : null;
+    }
+
+    /* 기간 — dateType + dateStart + dateEnd (yyyy-MM-dd, 끝일 포함) */
+    private BooleanExpression baseAndDateRange(ZzExam2Dto.Request s) {
+        if (s == null
+                || !StringUtils.hasText(s.getDateType())
+                || !StringUtils.hasText(s.getDateStart())
+                || !StringUtils.hasText(s.getDateEnd())) return null;
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        LocalDateTime start   = LocalDate.parse(s.getDateStart(), fmt).atStartOfDay();
+        LocalDateTime endExcl = LocalDate.parse(s.getDateEnd(),   fmt).plusDays(1).atStartOfDay();
+        switch (s.getDateType()) {
+            case "reg_date": return exam2.regDt.goe(start).and(exam2.regDt.lt(endExcl));
+            case "upd_date": return exam2.updDt.goe(start).and(exam2.updDt.lt(endExcl));
+            default: return null;
+        }
+    }
+
+    /* searchValue LIKE OR — searchType csv 분기 (없으면 전체 String 필드) */
+    private BooleanExpression baseAndSearchValue(ZzExam2Dto.Request s) {
+        if (s == null || !StringUtils.hasText(s.getSearchValue())) return null;
+        String pattern = "%" + s.getSearchValue() + "%";
+        String typeRaw = s.getSearchType();
+        boolean all = !StringUtils.hasText(typeRaw);
+        String types = all ? "" : ("," + typeRaw.trim() + ",");
+        BooleanExpression or = null;
+        or = orLike(or, all, types, ",exam1Id,", exam2.id.exam1Id, pattern);
+        or = orLike(or, all, types, ",exam1Nm,", exam1.exam1Nm,    pattern);
+        or = orLike(or, all, types, ",exam2Id,", exam2.id.exam2Id, pattern);
+        or = orLike(or, all, types, ",exam2Nm,", exam2.exam2Nm,    pattern);
+        or = orLike(or, all, types, ",col21,",   exam2.col21,      pattern);
+        or = orLike(or, all, types, ",col22,",   exam2.col22,      pattern);
+        or = orLike(or, all, types, ",col23,",   exam2.col23,      pattern);
+        or = orLike(or, all, types, ",col24,",   exam2.col24,      pattern);
+        or = orLike(or, all, types, ",col25,",   exam2.col25,      pattern);
+        return or;
+    }
+
+    /* 단일 필드 LIKE 조건을 누적 OR (해당 type 이 포함됐을 때만) */
+    private BooleanExpression orLike(BooleanExpression acc, boolean all, String types,
+                                     String token, StringPath path, String pattern) {
+        if (!(all || types.contains(token))) return acc;
+        BooleanExpression expr = path.likeIgnoreCase(pattern);
+        return acc == null ? expr : acc.or(expr);
     }
 
     /** 기본 쿼리 빌드 */

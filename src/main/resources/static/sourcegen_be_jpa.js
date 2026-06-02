@@ -352,12 +352,16 @@ function gnRepoCustomImplSource(pkg, className, varName, dataCols, pkCols, hasAu
     // 개별 조건 대상: PK 는 정확일치(eq), 그 외 String 컬럼은 LIKE
     const condCols = dataCols.filter(c => (c.isPk || c.javaType === 'String') && !c.isAudit);
 
-    // buildCondition 본문: 개별 baseAndXxx() 누적 (null 은 BooleanBuilder.and 가 자동 무시)
-    const conditionCalls = condCols
-        .map(c => `        b.and(baseAnd${fmCap(c.javaName)}(s));`)
-        .join('\n');
-    const dateRangeCall = hasAudit ? '\n        b.and(baseAndDateRange(s));' : '';
-    const searchValueCall = searchCols.length === 0 ? '' : '\n        b.and(baseAndSearchValue(s));';
+    // .where(...) 에 직접 나열할 baseAndXxx(search) varargs 목록 (null 은 .where 가 자동 무시)
+    const whereCallNames = [
+        ...condCols.map(c => `baseAnd${fmCap(c.javaName)}`),
+        ...(hasAudit ? ['baseAndDateRange'] : []),
+        ...(searchCols.length === 0 ? [] : ['baseAndSearchValue']),
+    ];
+    // 쿼리 .where( ... ) 안에 들어갈 문자열 (16칸 들여쓰기)
+    const whereArgs = whereCallNames
+        .map(name => `                        ${name}(search)`)
+        .join(',\n');
 
     // 개별 baseAndXxx() BooleanExpression 메서드 (PK=eq, 그 외=LIKE)
     const condMethods = condCols.map(c => {
@@ -418,11 +422,11 @@ ${orLikeLines}
         return acc == null ? expr : acc.or(expr);
     }`;
 
-    // buildCondition 아래 붙일 전체 헬퍼 메서드 블록
+    // 쿼리 .where(...) 에 직접 나열하는 개별 헬퍼 메서드 블록
     const condHelperBlock = `
     /* =============================================================
-     * 검색조건 — 개별 andXxx() BooleanExpression 반환 메서드 모음
-     * null 반환은 BooleanBuilder.and(...) 가 자동 무시
+     * 검색조건 — 개별 baseAndXxx() BooleanExpression 반환 메서드 모음
+     * 각 쿼리의 .where(baseAndXxx(search), ...) 에 직접 나열 — null 반환은 자동 무시
      * ============================================================= */
 
 ${condMethods}${dateRangeMethod}${searchValueMethod}`;
@@ -466,7 +470,6 @@ import ${pkg}.domain.${className};
 import ${pkg}.dto.${className}Dto;
 import ${pkg}.domain.Q${className};
 import ${pkg}.repository.qrydsl.Q${className}Repository;
-import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.PathBuilder;
@@ -510,10 +513,11 @@ public class Q${className}RepositoryImpl implements Q${className}Repository {
     /** 전체 목록 (pageNo/pageSize 가 양수면 페이징 적용) */
     @Override
     public List<${className}Dto.Item> selectList(${className}Dto.Request search) {
-        BooleanBuilder where = buildCondition(search);
         List<OrderSpecifier<?>> orderList = buildOrder(search);
         var query = buildBaseQuery()
-                .where(where);
+                .where(
+${whereArgs}
+                );
         if (!orderList.isEmpty()) {
             query.orderBy(orderList.toArray(OrderSpecifier[]::new));
         }
@@ -533,11 +537,12 @@ public class Q${className}RepositoryImpl implements Q${className}Repository {
         int offset   = (pageNo - 1) * pageSize;
         int limit    = pageSize;
 
-        BooleanBuilder where = buildCondition(search);
         List<OrderSpecifier<?>> orderList = buildOrder(search);
 
         var query = buildBaseQuery()
-                .where(where);
+                .where(
+${whereArgs}
+                );
         if (!orderList.isEmpty()) {
             query = query.orderBy(orderList.toArray(OrderSpecifier[]::new));
         }
@@ -548,7 +553,9 @@ public class Q${className}RepositoryImpl implements Q${className}Repository {
         Long total = queryFactory
                 .select(${varName}.count())
                 .from(${varName})
-                .where(where)
+                .where(
+${whereArgs}
+                )
                 .fetchOne();
 
         return ${className}Dto.Response.of(content, total == null ? 0L : total, pageNo, pageSize,
@@ -562,13 +569,6 @@ public class Q${className}RepositoryImpl implements Q${className}Repository {
                         ${qFields}
                 ))
                 .from(${varName});
-    }
-
-    /** 검색조건 빌드 — 개별 baseAndXxx() BooleanExpression 을 누적 (null 은 자동 무시) */
-    private BooleanBuilder buildCondition(${className}Dto.Request s) {
-        BooleanBuilder b = new BooleanBuilder();
-${conditionCalls}${dateRangeCall}${searchValueCall}
-        return b;
     }
 ${condHelperBlock}
 

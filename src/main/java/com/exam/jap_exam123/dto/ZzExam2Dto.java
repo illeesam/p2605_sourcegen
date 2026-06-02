@@ -52,6 +52,15 @@ public class ZzExam2Dto {
         // 정렬 (한 컬럼). 형식: "exam2Id asc" / "exam2Id desc"
         private String sortBy;
 
+        // 기간검색: dateType(reg_date|upd_date) + dateStart + dateEnd (yyyy-MM-dd, 끝일 포함)
+        private String dateType;
+        private String dateStart;
+        private String dateEnd;
+
+        // 통합 검색: searchValue LIKE OR, searchType csv 로 대상 필드 한정 (없으면 전체 String 필드)
+        private String searchValue;
+        private String searchType;
+
         public int getOffset() { return (pageNo - 1) * pageSize; }
 
         public ZzExam2 toEntity() {

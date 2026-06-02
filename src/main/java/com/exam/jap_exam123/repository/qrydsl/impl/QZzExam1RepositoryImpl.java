@@ -4,7 +4,6 @@ import com.exam.jap_exam123.domain.ZzExam1;
 import com.exam.jap_exam123.dto.ZzExam1Dto;
 import com.exam.jap_exam123.domain.QZzExam1;
 import com.exam.jap_exam123.repository.qrydsl.QZzExam1Repository;
-import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.PathBuilder;
@@ -77,10 +76,19 @@ public class QZzExam1RepositoryImpl implements QZzExam1Repository {
     /** 전체 목록 (page/size 가 양수면 페이징 적용) */
     @Override
     public List<ZzExam1Dto.Item> selectList(ZzExam1Dto.Request search) {
-        BooleanBuilder where = buildCondition(search);
         List<OrderSpecifier<?>> orderList = buildOrder(search);
         var query = buildBaseQuery()
-                .where(where);
+                .where(
+                        baseAndExam1Id(search),
+                        baseAndExam1Nm(search),
+                        baseAndCol11(search),
+                        baseAndCol12(search),
+                        baseAndCol13(search),
+                        baseAndCol14(search),
+                        baseAndCol15(search),
+                        baseAndDateRange(search),
+                        baseAndSearchValue(search)
+                );
         if (!orderList.isEmpty()) {
             query.orderBy(orderList.toArray(OrderSpecifier[]::new));
         }
@@ -100,11 +108,20 @@ public class QZzExam1RepositoryImpl implements QZzExam1Repository {
         int offset   = (pageNo - 1) * pageSize;
         int limit    = pageSize;
 
-        BooleanBuilder where = buildCondition(search);
         List<OrderSpecifier<?>> orderList = buildOrder(search);
 
         var query = buildBaseQuery()
-                .where(where);
+                .where(
+                        baseAndExam1Id(search),
+                        baseAndExam1Nm(search),
+                        baseAndCol11(search),
+                        baseAndCol12(search),
+                        baseAndCol13(search),
+                        baseAndCol14(search),
+                        baseAndCol15(search),
+                        baseAndDateRange(search),
+                        baseAndSearchValue(search)
+                );
         if (!orderList.isEmpty()) {
             query = query.orderBy(orderList.toArray(OrderSpecifier[]::new));
         }
@@ -115,25 +132,20 @@ public class QZzExam1RepositoryImpl implements QZzExam1Repository {
         Long total = queryFactory
                 .select(exam1.count())
                 .from(exam1)
-                .where(where)
+                .where(
+                        baseAndExam1Id(search),
+                        baseAndExam1Nm(search),
+                        baseAndCol11(search),
+                        baseAndCol12(search),
+                        baseAndCol13(search),
+                        baseAndCol14(search),
+                        baseAndCol15(search),
+                        baseAndDateRange(search),
+                        baseAndSearchValue(search)
+                )
                 .fetchOne();
 
         return ZzExam1Dto.Response.of(content, total == null ? 0L : total, pageNo, pageSize);
-    }
-
-    /** 검색조건 빌드 — 개별 baseAndXxx() BooleanExpression 을 누적 (null 은 자동 무시) */
-    private BooleanBuilder buildCondition(ZzExam1Dto.Request s) {
-        BooleanBuilder b = new BooleanBuilder();
-        b.and(baseAndExam1Id(s));
-        b.and(baseAndExam1Nm(s));
-        b.and(baseAndCol11(s));
-        b.and(baseAndCol12(s));
-        b.and(baseAndCol13(s));
-        b.and(baseAndCol14(s));
-        b.and(baseAndCol15(s));
-        b.and(baseAndDateRange(s));
-        b.and(baseAndSearchValue(s));
-        return b;
     }
 
     /* =============================================================
